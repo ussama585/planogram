@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   Alert,
+  Autocomplete,
   Button,
   CircularProgress,
   Dialog,
@@ -14,10 +15,8 @@ import {
   FormControl,
   IconButton,
   InputLabel,
-  MenuItem,
   OutlinedInput,
   Paper,
-  Select,
   Stack,
   Table,
   TableBody,
@@ -25,6 +24,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography
 } from '@mui/material';
 
@@ -35,9 +35,10 @@ import MainCard from 'ui-component/cards/MainCard';
 import useAxios from '../../api/useAxios';
 
 const recordSchema = Yup.object({
-  product: Yup.string().required('Product is required'),
+  region: Yup.string().required('Region is required'),
   store: Yup.string().required('Store is required'),
   table_type: Yup.string().required('Table type is required'),
+  product: Yup.string().required('Product is required'),
   security_type: Yup.string().required('Security type is required'),
   table_number: Yup.number()
     .typeError('Table number must be a number')
@@ -155,7 +156,7 @@ const formatDate = (value) => {
   return date.toLocaleString();
 };
 
-const SelectField = ({
+const SearchableSelectField = ({
   id,
   label,
   name,
@@ -163,37 +164,63 @@ const SelectField = ({
   options,
   error,
   touched,
-  onChange,
-  onBlur,
-  loading
+  loading,
+  setFieldValue,
+  setFieldTouched
 }) => {
+  const selectedOption =
+    options.find(
+      (option) => String(option?.id) === String(value)
+    ) || null;
+
   return (
-    <FormControl fullWidth error={Boolean(touched && error)}>
-      <InputLabel id={`${id}-label`}>{label}</InputLabel>
+    <Autocomplete
+      id={id}
+      options={options}
+      value={selectedOption}
+      loading={loading}
+      disabled={loading}
+      autoHighlight
+      clearOnEscape
+      isOptionEqualToValue={(option, selectedValue) =>
+        String(option?.id) === String(selectedValue?.id)
+      }
+      getOptionLabel={(option) =>
+        String(option?.name || option?.id || '')
+      }
+      onChange={(_, selectedValue) => {
+        setFieldValue(
+          name,
+          selectedValue?.id !== undefined
+            ? String(selectedValue.id)
+            : ''
+        );
+      }}
+      onBlur={() => {
+        setFieldTouched(name, true);
+      }}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          name={name}
+          label={label}
+          error={Boolean(touched && error)}
+          helperText={touched && error ? error : ''}
+          InputProps={{
+            ...params.InputProps,
+            endAdornment: (
+              <>
+                {loading ? (
+                  <CircularProgress size={18} />
+                ) : null}
 
-      <Select
-        labelId={`${id}-label`}
-        id={id}
-        name={name}
-        label={label}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        disabled={loading}
-      >
-        {options.map((option) => (
-          <MenuItem key={option?.id} value={String(option?.id)}>
-            {option?.name || option?.id}
-          </MenuItem>
-        ))}
-      </Select>
-
-      {touched && error && (
-        <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-          {error}
-        </Typography>
+                {params.InputProps.endAdornment}
+              </>
+            )
+          }}
+        />
       )}
-    </FormControl>
+    />
   );
 };
 
@@ -216,11 +243,14 @@ export default function DisplayRecordsPage() {
   } = useQuery({
     queryKey: ['display-record-list', page],
     queryFn: async () => {
-      const response = await api.get('/api/inventory/record-list', {
-        params: {
-          page
+      const response = await api.get(
+        '/api/inventory/record-list',
+        {
+          params: {
+            page
+          }
         }
-      });
+      );
 
       return response.data;
     },
@@ -228,13 +258,13 @@ export default function DisplayRecordsPage() {
   });
 
   const {
-    data: productOptionsData,
-    isLoading: isProductsLoading
+    data: regionOptionsData,
+    isLoading: isRegionsLoading
   } = useQuery({
-    queryKey: ['product-name-list'],
+    queryKey: ['region-name-list'],
     queryFn: async () => {
       const response = await api.get(
-        '/api/inventory/product-name-list'
+        '/api/inventory/region-name-list'
       );
 
       return response.data;
@@ -270,6 +300,20 @@ export default function DisplayRecordsPage() {
   });
 
   const {
+    data: productOptionsData,
+    isLoading: isProductsLoading
+  } = useQuery({
+    queryKey: ['product-name-list'],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/product-name-list'
+      );
+
+      return response.data;
+    }
+  });
+
+  const {
     data: securityOptionsData,
     isLoading: isSecurityTypesLoading
   } = useQuery({
@@ -288,9 +332,9 @@ export default function DisplayRecordsPage() {
     [recordData]
   );
 
-  const productOptions = useMemo(
-    () => getListFromResponse(productOptionsData),
-    [productOptionsData]
+  const regionOptions = useMemo(
+    () => getListFromResponse(regionOptionsData),
+    [regionOptionsData]
   );
 
   const storeOptions = useMemo(
@@ -303,23 +347,30 @@ export default function DisplayRecordsPage() {
     [tableOptionsData]
   );
 
+  const productOptions = useMemo(
+    () => getListFromResponse(productOptionsData),
+    [productOptionsData]
+  );
+
   const securityTypeOptions = useMemo(
     () => getListFromResponse(securityOptionsData),
     [securityOptionsData]
   );
 
   const optionsLoading =
-    isProductsLoading ||
+    isRegionsLoading ||
     isStoresLoading ||
     isTableTypesLoading ||
+    isProductsLoading ||
     isSecurityTypesLoading;
 
   const initialValues = useMemo(
     () => ({
-      product: getOptionId(
-        productOptions,
-        selectedRecord?.product_id ??
-        selectedRecord?.product_name
+      region: getOptionId(
+        regionOptions,
+        selectedRecord?.region_id ??
+        selectedRecord?.region_name ??
+        selectedRecord?.region
       ),
       store: getOptionId(
         storeOptions,
@@ -330,6 +381,11 @@ export default function DisplayRecordsPage() {
         tableTypeOptions,
         selectedRecord?.table_type_id ??
         selectedRecord?.table_type_name
+      ),
+      product: getOptionId(
+        productOptions,
+        selectedRecord?.product_id ??
+        selectedRecord?.product_name
       ),
       security_type: getOptionId(
         securityTypeOptions,
@@ -343,9 +399,10 @@ export default function DisplayRecordsPage() {
     }),
     [
       selectedRecord,
-      productOptions,
+      regionOptions,
       storeOptions,
       tableTypeOptions,
+      productOptions,
       securityTypeOptions
     ]
   );
@@ -353,9 +410,10 @@ export default function DisplayRecordsPage() {
   const createRecordMutation = useMutation({
     mutationFn: async (values) => {
       const payload = {
-        product: Number(values.product),
+        region: Number(values.region),
         store: Number(values.store),
         table_type: Number(values.table_type),
+        product: Number(values.product),
         security_type: Number(values.security_type),
         table_number: Number(values.table_number),
         quantity: Number(values.quantity),
@@ -383,9 +441,10 @@ export default function DisplayRecordsPage() {
   const updateRecordMutation = useMutation({
     mutationFn: async (values) => {
       const payload = {
-        product: Number(values.product),
+        region: Number(values.region),
         store: Number(values.store),
         table_type: Number(values.table_type),
+        product: Number(values.product),
         security_type: Number(values.security_type),
         table_number: Number(values.table_number),
         quantity: Number(values.quantity),
@@ -477,8 +536,10 @@ export default function DisplayRecordsPage() {
     updateRecordMutation.error;
 
   const totalRecords = Number(recordData?.count) || 0;
-  const currentPage = Number(recordData?.current_page) || page;
-  const totalPages = Number(recordData?.total_pages) || 1;
+  const currentPage =
+    Number(recordData?.current_page) || page;
+  const totalPages =
+    Number(recordData?.total_pages) || 1;
   const hasPreviousPage = Boolean(recordData?.previous);
   const hasNextPage = Boolean(recordData?.next);
 
@@ -498,8 +559,8 @@ export default function DisplayRecordsPage() {
       >
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            Manage products assigned to stores, tables and security
-            types.
+            Manage products assigned to regions, stores, tables and
+            security types.
           </Typography>
 
           <TableContainer component={Paper} variant="outlined">
@@ -526,17 +587,18 @@ export default function DisplayRecordsPage() {
               <Table
                 size="small"
                 sx={{
-                  minWidth: 1700
+                  minWidth: 1750
                 }}
               >
                 <TableHead>
                   <TableRow>
+                    <TableCell>Region</TableCell>
+                    <TableCell>Store</TableCell>
+                    <TableCell>Table Type</TableCell>
                     <TableCell>Product</TableCell>
                     <TableCell>Product SKU</TableCell>
                     <TableCell>Branch Code</TableCell>
                     <TableCell>Store Code</TableCell>
-                    <TableCell>Store</TableCell>
-                    <TableCell>Table Type</TableCell>
                     <TableCell>Security Type</TableCell>
                     <TableCell>Table #</TableCell>
                     <TableCell>Quantity</TableCell>
@@ -551,9 +613,26 @@ export default function DisplayRecordsPage() {
                   {records.length > 0 ? (
                     records.map((record, index) => (
                       <TableRow
-                        key={record?.id || `display-record-${index}`}
+                        key={
+                          record?.id ||
+                          `display-record-${index}`
+                        }
                         hover
                       >
+                        <TableCell>
+                          {record?.region_name ||
+                            record?.region ||
+                            '-'}
+                        </TableCell>
+
+                        <TableCell>
+                          {record?.store_name || '-'}
+                        </TableCell>
+
+                        <TableCell>
+                          {record?.table_type_name || '-'}
+                        </TableCell>
+
                         <TableCell
                           sx={{
                             minWidth: 260,
@@ -586,14 +665,6 @@ export default function DisplayRecordsPage() {
                         </TableCell>
 
                         <TableCell>
-                          {record?.store_name || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.table_type_name || '-'}
-                        </TableCell>
-
-                        <TableCell>
                           {record?.security_type_name || '-'}
                         </TableCell>
 
@@ -621,7 +692,9 @@ export default function DisplayRecordsPage() {
                           <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => handleOpenEdit(record)}
+                            onClick={() =>
+                              handleOpenEdit(record)
+                            }
                           >
                             <EditOutlinedIcon fontSize="small" />
                           </IconButton>
@@ -629,7 +702,9 @@ export default function DisplayRecordsPage() {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDelete(record)}
+                            onClick={() =>
+                              handleDelete(record)
+                            }
                           >
                             <DeleteOutlineOutlinedIcon fontSize="small" />
                           </IconButton>
@@ -638,7 +713,7 @@ export default function DisplayRecordsPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={13} align="center">
+                      <TableCell colSpan={14} align="center">
                         No display records found.
                       </TableCell>
                     </TableRow>
@@ -685,7 +760,9 @@ export default function DisplayRecordsPage() {
                 variant="outlined"
                 disabled={!hasNextPage || isFetching}
                 onClick={() => {
-                  setPage((currentValue) => currentValue + 1);
+                  setPage(
+                    (currentValue) => currentValue + 1
+                  );
                 }}
               >
                 Next
@@ -767,6 +844,7 @@ export default function DisplayRecordsPage() {
               handleChange,
               handleBlur,
               setFieldValue,
+              setFieldTouched,
               handleSubmit: submitForm
             }) => (
               <form onSubmit={submitForm}>
@@ -777,22 +855,20 @@ export default function DisplayRecordsPage() {
                     </Alert>
                   )}
 
-                  <SelectField
-                    id="display-record-product"
-                    name="product"
-                    label="Product"
-                    value={values.product}
-                    options={productOptions}
-                    loading={isProductsLoading}
-                    touched={touched.product}
-                    error={errors.product}
-                    onChange={(event) =>
-                      setFieldValue('product', event.target.value)
-                    }
-                    onBlur={handleBlur}
+                  <SearchableSelectField
+                    id="display-record-region"
+                    name="region"
+                    label="Region"
+                    value={values.region}
+                    options={regionOptions}
+                    loading={isRegionsLoading}
+                    touched={touched.region}
+                    error={errors.region}
+                    setFieldValue={setFieldValue}
+                    setFieldTouched={setFieldTouched}
                   />
 
-                  <SelectField
+                  <SearchableSelectField
                     id="display-record-store"
                     name="store"
                     label="Store"
@@ -801,13 +877,11 @@ export default function DisplayRecordsPage() {
                     loading={isStoresLoading}
                     touched={touched.store}
                     error={errors.store}
-                    onChange={(event) =>
-                      setFieldValue('store', event.target.value)
-                    }
-                    onBlur={handleBlur}
+                    setFieldValue={setFieldValue}
+                    setFieldTouched={setFieldTouched}
                   />
 
-                  <SelectField
+                  <SearchableSelectField
                     id="display-record-table-type"
                     name="table_type"
                     label="Table Type"
@@ -816,13 +890,24 @@ export default function DisplayRecordsPage() {
                     loading={isTableTypesLoading}
                     touched={touched.table_type}
                     error={errors.table_type}
-                    onChange={(event) =>
-                      setFieldValue('table_type', event.target.value)
-                    }
-                    onBlur={handleBlur}
+                    setFieldValue={setFieldValue}
+                    setFieldTouched={setFieldTouched}
                   />
 
-                  <SelectField
+                  <SearchableSelectField
+                    id="display-record-product"
+                    name="product"
+                    label="Product"
+                    value={values.product}
+                    options={productOptions}
+                    loading={isProductsLoading}
+                    touched={touched.product}
+                    error={errors.product}
+                    setFieldValue={setFieldValue}
+                    setFieldTouched={setFieldTouched}
+                  />
+
+                  <SearchableSelectField
                     id="display-record-security-type"
                     name="security_type"
                     label="Security Type"
@@ -831,13 +916,8 @@ export default function DisplayRecordsPage() {
                     loading={isSecurityTypesLoading}
                     touched={touched.security_type}
                     error={errors.security_type}
-                    onChange={(event) =>
-                      setFieldValue(
-                        'security_type',
-                        event.target.value
-                      )
-                    }
-                    onBlur={handleBlur}
+                    setFieldValue={setFieldValue}
+                    setFieldTouched={setFieldTouched}
                   />
 
                   <FormControl
