@@ -1,5 +1,5 @@
 // assets
-import { IconDashboard, IconMap2, IconBuildingStore, IconBrand4chan, IconCategory, IconBox, IconTableDashed } from '@tabler/icons-react';
+import { IconDashboard, IconMap2, IconBuildingStore, IconBrand4chan, IconCategory, IconBox, IconTableDashed, IconShieldCog, IconDatabase } from '@tabler/icons-react';
 
 // constant
 const icons = { IconDashboard };
@@ -65,6 +65,22 @@ const dashboard = {
       type: 'item',
       url: '/tables',
       icon: IconTableDashed,
+      breadcrumbs: false
+    },
+    {
+      id: 'security-types',
+      title: 'Security Type',
+      type: 'item',
+      url: '/security-types',
+      icon: IconShieldCog,
+      breadcrumbs: false
+    },
+    {
+      id: 'display-record',
+      title: 'Display Record',
+      type: 'item',
+      url: '/display-record',
+      icon: IconDatabase,
       breadcrumbs: false
     },
   ]

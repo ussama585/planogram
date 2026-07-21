@@ -5,6 +5,8 @@ import MainLayout from 'layout/MainLayout';
 import Loadable from 'ui-component/Loadable';
 import ProtectedRoute from './ProtectedRoute';
 import TablesPage from '../views/tables';
+import SecurityTypePage from '../views/security-types';
+import DisplayRecordsPage from '../views/display-record';
 
 // dashboard routing
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
@@ -70,6 +72,14 @@ const MainRoutes = {
     {
       path: 'tables',
       element: <TablesPage />
+    },
+    {
+      path: 'security-types',
+      element: <SecurityTypePage />
+    },
+    {
+      path: 'display-record',
+      element: <DisplayRecordsPage />
     },
   ]
 };

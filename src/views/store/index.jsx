@@ -52,9 +52,9 @@ export default function StorePage() {
       return response.data;
     }
   });
-
+  
   const regionOptions = useMemo(() => {
-    if (Array.isArray(regionOptionsData?.results)) return regionOptionsData.results;
+    if (Array.isArray(regionOptionsData)) return regionOptionsData;
     return [];
   }, [regionOptionsData]);
 
