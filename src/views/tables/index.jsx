@@ -26,90 +26,90 @@ import Paper from '@mui/material/Paper';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import useAxios from '../../api/useAxios';
-import regionSchema from './regionSchema';
+import tableSchema from './tableSchema';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 
-export default function RegionPage() {
+export default function TablesPage() {
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [selectedTable, setSelectedTable] = useState(null);
   const api = useAxios();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['region-list'],
+    queryKey: ['table-list'],
     queryFn: async () => {
-      const response = await api.get(`/api/inventory/region-list`);
+      const response = await api.get(`/api/inventory/table-list`);
       return response.data;
     }
   });
 
-  const createRegionMutation = useMutation({
+  const createTableMutation = useMutation({
     mutationFn: async (values) => {
-      const response = await api.post(`/api/inventory/region-create`, values);
+      const response = await api.post(`/api/inventory/table-create`, values);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['region-list'] });
+      queryClient.invalidateQueries({ queryKey: ['table-list'] });
       setOpen(false);
-      setSelectedRegion(null);
+      setSelectedTable(null);
     }
   });
 
-  const updateRegionMutation = useMutation({
+  const updateTableMutation = useMutation({
     mutationFn: async (values) => {
-      const response = await api.patch(`/api/inventory/region-detail/${selectedRegion?.id}`, values);
+      const response = await api.patch(`/api/inventory/table-detail/${selectedTable?.id}`, values);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['region-list'] });
+      queryClient.invalidateQueries({ queryKey: ['table-list'] });
       setOpen(false);
-      setSelectedRegion(null);
+      setSelectedTable(null);
     }
   });
 
-  const deleteRegionMutation = useMutation({
-    mutationFn: async (regionId) => {
-      const response = await api.delete(`/api/inventory/region-detail/${regionId}`);
+  const deleteTableMutation = useMutation({
+    mutationFn: async (tableId) => {
+      const response = await api.delete(`/api/inventory/table-detail/${tableId}`);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['region-list'] });
+      queryClient.invalidateQueries({ queryKey: ['table-list'] });
     }
   });
 
-  const regions = useMemo(() => {
+  const tables = useMemo(() => {
     if (Array.isArray(data?.results)) return data.results;
     return [];
   }, [data]);
 
   const handleOpenCreate = () => {
-    setSelectedRegion(null);
+    setSelectedTable(null);
     setOpen(true);
   };
 
-  const handleOpenEdit = (region) => {
-    setSelectedRegion(region);
+  const handleOpenEdit = (table) => {
+    setSelectedTable(table);
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setSelectedRegion(null);
+    setSelectedTable(null);
   };
 
-  const handleDelete = (region) => {
-    setSelectedRegion(region);
+  const handleDelete = (table) => {
+    setSelectedTable(table);
     setDeleteOpen(true);
   };
 
   const handleDeleteConfirm = () => {
-    if (selectedRegion?.id) {
-      deleteRegionMutation.mutate(selectedRegion.id, {
+    if (selectedTable?.id) {
+      deleteTableMutation.mutate(selectedTable.id, {
         onSuccess: () => {
           setDeleteOpen(false);
-          setSelectedRegion(null);
+          setSelectedTable(null);
         }
       });
     }
@@ -117,15 +117,15 @@ export default function RegionPage() {
 
   const handleDeleteClose = () => {
     setDeleteOpen(false);
-    setSelectedRegion(null);
+    setSelectedTable(null);
   };
 
   return (
     <>
-      <MainCard title="Regions" secondary={<Button variant="contained" onClick={handleOpenCreate}>Add Region</Button>}>
+      <MainCard title="Tables" secondary={<Button variant="contained" onClick={handleOpenCreate}>Add Table</Button>}>
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            Manage your regions and monitor regional inventory coverage.
+            Manage your tables and monitor regional inventory coverage.
           </Typography>
           <TableContainer component={Paper} variant="outlined">
             {isLoading ? (
@@ -134,35 +134,32 @@ export default function RegionPage() {
               </Stack>
             ) : isError ? (
               <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <Typography color="error">Failed to load regions: {error?.message || 'Unknown error'}</Typography>
+                <Typography color="error">Failed to load tables: {error?.message || 'Unknown error'}</Typography>
               </Stack>
             ) : (
               <Table size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Status</TableCell>
                     <TableCell>Description</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {regions.length > 0 ? (
-                    regions.map((region, index) => {
-                      const name = region?.name || `Region ${index + 1}`;
-                      const status = region?.is_active ? 'Active' : 'Inactive';
-                      const description = region?.description || '-';
+                  {tables.length > 0 ? (
+                    tables.map((table, index) => {
+                      const name = table?.name || `table ${index + 1}`;
+                      const description = table?.description || '-';
 
                       return (
-                        <TableRow key={region?.id || `${name}-${index}`} hover>
+                        <TableRow key={table?.id || `${name}-${index}`} hover>
                           <TableCell>{name}</TableCell>
-                          <TableCell>{status}</TableCell>
                           <TableCell>{description}</TableCell>
                           <TableCell align="right">
-                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(region)}>
+                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(table)}>
                               <EditOutlinedIcon fontSize="small" />
                             </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDelete(region)}>
+                            <IconButton size="small" color="error" onClick={() => handleDelete(table)}>
                               <DeleteOutlineOutlinedIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
@@ -172,7 +169,7 @@ export default function RegionPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} align="center">
-                        No regions found.
+                        No tables found.
                       </TableCell>
                     </TableRow>
                   )}
@@ -184,34 +181,34 @@ export default function RegionPage() {
       </MainCard>
 
       <Dialog open={deleteOpen} onClose={handleDeleteClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Delete Region</DialogTitle>
+        <DialogTitle>Delete Table</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete <strong>{selectedRegion?.name || 'this region'}</strong>?
+            Are you sure you want to delete <strong>{selectedTable?.name || 'this table'}</strong>?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleDeleteClose}>No</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteRegionMutation.isPending}>
-            {deleteRegionMutation.isPending ? 'Deleting...' : 'Yes'}
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteTableMutation.isPending}>
+            {deleteTableMutation.isPending ? 'Deleting...' : 'Yes'}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{selectedRegion ? 'Edit Region' : 'Add Region'}</DialogTitle>
+        <DialogTitle>{selectedTable ? 'Edit Table' : 'Add Table'}</DialogTitle>
         <DialogContent>
           <Formik
-            initialValues={{ name: selectedRegion?.name || '', description: selectedRegion?.description || '' }}
+            initialValues={{ name: selectedTable?.name || '', description: selectedTable?.description || '' }}
             enableReinitialize
-            validationSchema={regionSchema}
+            validationSchema={tableSchema}
             onSubmit={(values, { resetForm }) => {
-              if (selectedRegion?.id) {
-                updateRegionMutation.mutate(values, {
+              if (selectedTable?.id) {
+                updateTableMutation.mutate(values, {
                   onSuccess: () => resetForm()
                 });
               } else {
-                createRegionMutation.mutate(values, {
+                createTableMutation.mutate(values, {
                   onSuccess: () => resetForm()
                 });
               }
@@ -220,41 +217,41 @@ export default function RegionPage() {
             {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
               <form onSubmit={handleSubmit}>
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                <FormControl fullWidth error={Boolean(touched.name && errors.name)}>
-                  <InputLabel htmlFor="region-name">Name</InputLabel>
-                  <OutlinedInput
-                    id="region-name"
-                    name="name"
-                    label="Name"
-                    value={values.name}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                  />
-                  {touched.name && errors.name && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.name}
-                    </Typography>
-                  )}
-                </FormControl>
+                  <FormControl fullWidth error={Boolean(touched.name && errors.name)}>
+                    <InputLabel htmlFor="table-name">Name</InputLabel>
+                    <OutlinedInput
+                      id="table-name"
+                      name="name"
+                      label="Name"
+                      value={values.name}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    {touched.name && errors.name && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                        {errors.name}
+                      </Typography>
+                    )}
+                  </FormControl>
 
-                <FormControl fullWidth error={Boolean(touched.description && errors.description)}>
-                  <InputLabel htmlFor="region-description">Description</InputLabel>
-                  <OutlinedInput
-                    id="region-description"
-                    name="description"
-                    label="Description"
-                    multiline
-                    minRows={3}
-                    value={values.description}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                  />
-                  {touched.description && errors.description && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.description}
-                    </Typography>
-                  )}
-                </FormControl>
+                  <FormControl fullWidth error={Boolean(touched.description && errors.description)}>
+                    <InputLabel htmlFor="table-description">Description</InputLabel>
+                    <OutlinedInput
+                      id="table-description"
+                      name="description"
+                      label="Description"
+                      multiline
+                      minRows={3}
+                      value={values.description}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    {touched.description && errors.description && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                        {errors.description}
+                      </Typography>
+                    )}
+                  </FormControl>
                 </Stack>
               </form>
             )}
@@ -268,9 +265,9 @@ export default function RegionPage() {
               const form = document.querySelector('form');
               if (form) form.requestSubmit();
             }}
-            disabled={createRegionMutation.isPending || updateRegionMutation.isPending}
+            disabled={createTableMutation.isPending || updateTableMutation.isPending}
           >
-            {createRegionMutation.isPending || updateRegionMutation.isPending ? 'Saving...' : selectedRegion ? 'Update Region' : 'Save Region'}
+            {createTableMutation.isPending || updateTableMutation.isPending ? 'Saving...' : selectedTable ? 'Update Table' : 'Save Table'}
           </Button>
         </DialogActions>
       </Dialog>

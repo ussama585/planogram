@@ -4,6 +4,7 @@ import { lazy } from 'react';
 import MainLayout from 'layout/MainLayout';
 import Loadable from 'ui-component/Loadable';
 import ProtectedRoute from './ProtectedRoute';
+import TablesPage from '../views/tables';
 
 // dashboard routing
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
@@ -46,22 +47,6 @@ const MainRoutes = {
         }
       ]
     },
-    // {
-    //   path: 'typography',
-    //   element: <UtilsTypography />
-    // },
-    // {
-    //   path: 'color',
-    //   element: <UtilsColor />
-    // },
-    // {
-    //   path: 'shadow',
-    //   element: <UtilsShadow />
-    // },
-    // {
-    //   path: '/sample-page',
-    //   element: <SamplePage />
-    // },
     {
       path: 'region',
       element: <RegionPage />
@@ -81,6 +66,10 @@ const MainRoutes = {
     {
       path: 'products',
       element: <ProductsPage />
+    },
+    {
+      path: 'tables',
+      element: <TablesPage />
     },
   ]
 };

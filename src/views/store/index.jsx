@@ -54,16 +54,12 @@ export default function StorePage() {
   });
 
   const regionOptions = useMemo(() => {
-    if (Array.isArray(regionOptionsData)) return regionOptionsData;
     if (Array.isArray(regionOptionsData?.results)) return regionOptionsData.results;
-    if (Array.isArray(regionOptionsData?.data)) return regionOptionsData.data;
     return [];
   }, [regionOptionsData]);
 
   const stores = useMemo(() => {
-    if (Array.isArray(storeData)) return storeData;
     if (Array.isArray(storeData?.results)) return storeData.results;
-    if (Array.isArray(storeData?.data)) return storeData.data;
     return [];
   }, [storeData]);
 

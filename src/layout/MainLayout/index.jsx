@@ -55,7 +55,7 @@ export default function MainLayout() {
       <Sidebar />
 
       {/* main content */}
-      <MainContentStyled {...{ borderRadius, open: drawerOpen }}>
+      <MainContentStyled {...{ borderRadius, open: drawerOpen, background: "#F0EDF8" }}>
         <Box sx={{ ...{ px: { xs: 0 } }, minHeight: 'calc(100vh - 128px)', display: 'flex', flexDirection: 'column' }}>
           {/* breadcrumb */}
           <Breadcrumbs />

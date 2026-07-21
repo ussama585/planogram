@@ -13,12 +13,12 @@ import {
 
 import "../../../assets/scss/display-explorer.scss";
 import {
-  groupPlanogramRecords,
-  normalizePlanogramResponse
+  groupPlanogramRecords
 } from "../../../utils/display-explorer";
 import useAxios from "../../../api/useAxios";
 import MultiSelectFilter from "./MultiSelectFilters";
 import DisplayRegionAccordion from "./DisplayRegionAccordion";
+import DisplayOverview from "./DisplayOverview";
 
 const getListFromResponse = (responseData) => {
   if (Array.isArray(responseData)) {
@@ -41,189 +41,92 @@ const createOptions = (items = []) =>
     .filter((item) => item?.name)
     .map((item) => ({
       value: String(item.name),
-      label: item.name
+      label: String(item.name)
     }));
 
-const getObjectValue = (value, possibleKeys = []) => {
-  if (
-    value === null ||
-    value === undefined ||
-    typeof value !== "object"
-  ) {
-    return value ?? "";
-  }
-
-  const matchedKey = possibleKeys.find(
-    (key) =>
-      value?.[key] !== undefined &&
-      value?.[key] !== null &&
-      value?.[key] !== ""
-  );
-
-  return matchedKey ? value[matchedKey] : "";
-};
-
-const getFirstValue = (...values) =>
-  values.find(
-    (value) =>
-      value !== undefined &&
-      value !== null &&
-      value !== ""
-  ) ?? "";
-
-const normalizeRecordListResponse = (responseData) => {
-  if (Array.isArray(responseData?.values)) {
-    return normalizePlanogramResponse(responseData);
-  }
-
+const normalizeRecordListResponse = (
+  responseData,
+  selectedRegions
+) => {
   const responseRecords =
     getListFromResponse(responseData);
 
-  return responseRecords
-    .map((record, index) => {
-      const branch = String(
-        getFirstValue(
-          record?.branch_code,
-          record?.branchCode,
-          record?.branch_name,
-          record?.branchName,
-          getObjectValue(record?.branch, [
-            "code",
-            "branch_code",
-            "name"
-          ]),
-          record?.Branch
-        )
-      ).trim();
+  return responseRecords.map((record, index) => {
+    const branch = String(
+      record?.branch_code ?? ""
+    ).trim();
 
-      const storeName = String(
-        getFirstValue(
-          record?.store_name,
-          record?.storeName,
-          getObjectValue(record?.store, [
-            "name",
-            "store_name",
-            "title"
-          ]),
-          record?.["Store Name"]
-        )
-      ).trim();
+    const storeCode = String(
+      record?.store_code ?? ""
+    ).trim();
 
-      const tableType = String(
-        getFirstValue(
-          record?.table_type,
-          record?.tableType,
-          record?.table_name,
-          record?.tableName,
-          getObjectValue(record?.table, [
-            "name",
-            "table_type",
-            "table_name"
-          ]),
-          record?.["Table Type"]
-        )
-      ).trim();
+    const storeName = String(
+      record?.store_name ?? ""
+    ).trim();
 
-      const tableNumber = String(
-        getFirstValue(
-          record?.table_number,
-          record?.tableNumber,
-          record?.["Table Number"]
-        )
-      ).trim();
+    const tableType = String(
+      record?.table_type_name ?? ""
+    ).trim();
 
-      const quantity =
-        Number(
-          getFirstValue(
-            record?.qty,
-            record?.quantity,
-            record?.QTY
-          )
-        ) || 0;
+    const tableNumber = String(
+      record?.table_number ?? ""
+    ).trim();
 
-      const securityType = String(
-        getFirstValue(
-          record?.security_type,
-          record?.securityType,
-          getObjectValue(record?.security, [
-            "name",
-            "security_type"
-          ]),
-          record?.["Security Type"]
-        )
-      ).trim();
+    const securityType = String(
+      record?.security_type_name ?? ""
+    ).trim();
 
-      const action = String(
-        getFirstValue(
-          record?.action,
-          record?.Action
-        )
-      ).trim();
+    const itemCode = String(
+      record?.product_sku ?? ""
+    ).trim();
 
-      const itemCode = String(
-        getFirstValue(
-          record?.item_code,
-          record?.itemCode,
-          record?.sku,
-          record?.["Item Code"]
-        )
-      ).trim();
+    const description = String(
+      record?.product_name ?? ""
+    ).trim();
 
-      const description = String(
-        getFirstValue(
-          record?.description,
-          record?.product_description,
-          record?.productDescription,
-          record?.product_name,
-          record?.productName,
-          record?.Description
-        )
-      ).trim();
+    const region = String(
+      record?.region_name ??
+      record?.region ??
+      (
+        selectedRegions.length === 1
+          ? selectedRegions[0]
+          : "Unassigned Region"
+      )
+    ).trim();
 
-      const region = String(
-        getFirstValue(
-          record?.region_name,
-          record?.regionName,
-          getObjectValue(record?.region, [
-            "name",
-            "region_name",
-            "title"
-          ]),
-          record?.Region
-        )
-      ).trim();
-
-      return {
-        id:
-          record?.id ??
-          `${branch}-${storeName}-${tableType}-${tableNumber}-${itemCode}-${index}`,
-        branch,
-        storeName,
-        storeKey: `${branch}__${storeName}`,
-        tableType,
-        tableNumber,
-        quantity,
-        securityType,
-        action,
-        itemCode,
-        description,
-        region
-      };
-    })
-    .filter(
-      (record) =>
-        record.region ||
-        record.storeName ||
-        record.description ||
-        record.itemCode
-    );
+    return {
+      id:
+        record?.id ??
+        `${branch}-${storeCode}-${tableType}-${tableNumber}-${itemCode}-${index}`,
+      branch,
+      storeCode,
+      storeName,
+      storeKey:
+        `${storeCode || branch}__${storeName}`,
+      tableType,
+      tableNumber,
+      quantity: Number(record?.quantity) || 0,
+      securityType,
+      itemCode,
+      description,
+      region,
+      keyboard: String(
+        record?.keyboard ?? ""
+      ).trim(),
+      pen: String(
+        record?.pen ?? ""
+      ).trim()
+    };
+  });
 };
 
 const StatItem = ({ value, label }) => {
   return (
     <div className="de-stat-item">
       <strong>
-        {new Intl.NumberFormat().format(value)}
+        {new Intl.NumberFormat().format(
+          Number(value) || 0
+        )}
       </strong>
 
       <span>{label}</span>
@@ -238,13 +141,17 @@ const DisplayExplorer = ({
   const api = useAxios();
 
   const [activeTab, setActiveTab] =
-    useState("explorer");
+    useState("overview");
 
-  const [selectedRegions, setSelectedRegions] =
-    useState([]);
+  const [
+    selectedRegions,
+    setSelectedRegions
+  ] = useState([]);
 
-  const [selectedStores, setSelectedStores] =
-    useState([]);
+  const [
+    selectedStores,
+    setSelectedStores
+  ] = useState([]);
 
   const [
     selectedTableTypes,
@@ -284,7 +191,9 @@ const DisplayExplorer = ({
     isLoading: isRegionsLoading,
     isError: isRegionsError
   } = useQuery({
-    queryKey: ["inventory-region-name-list"],
+    queryKey: [
+      "inventory-region-name-list"
+    ],
     queryFn: async () => {
       const response = await api.get(
         "/api/inventory/region-name-list"
@@ -299,7 +208,9 @@ const DisplayExplorer = ({
     isLoading: isStoresLoading,
     isError: isStoresError
   } = useQuery({
-    queryKey: ["inventory-store-name-list"],
+    queryKey: [
+      "inventory-store-name-list"
+    ],
     queryFn: async () => {
       const response = await api.get(
         "/api/inventory/store-name-list"
@@ -314,7 +225,9 @@ const DisplayExplorer = ({
     isLoading: isTableTypesLoading,
     isError: isTableTypesError
   } = useQuery({
-    queryKey: ["inventory-table-name-list"],
+    queryKey: [
+      "inventory-table-name-list"
+    ],
     queryFn: async () => {
       const response = await api.get(
         "/api/inventory/table-name-list"
@@ -327,7 +240,9 @@ const DisplayExplorer = ({
   const regionOptions = useMemo(
     () =>
       createOptions(
-        getListFromResponse(regionOptionsData)
+        getListFromResponse(
+          regionOptionsData
+        )
       ),
     [regionOptionsData]
   );
@@ -335,7 +250,9 @@ const DisplayExplorer = ({
   const storeOptions = useMemo(
     () =>
       createOptions(
-        getListFromResponse(storeOptionsData)
+        getListFromResponse(
+          storeOptionsData
+        )
       ),
     [storeOptionsData]
   );
@@ -343,7 +260,9 @@ const DisplayExplorer = ({
   const tableTypeOptions = useMemo(
     () =>
       createOptions(
-        getListFromResponse(tableOptionsData)
+        getListFromResponse(
+          tableOptionsData
+        )
       ),
     [tableOptionsData]
   );
@@ -409,7 +328,8 @@ const DisplayExplorer = ({
     };
 
     if (debouncedSearchValue) {
-      params.search = debouncedSearchValue;
+      params.search =
+        debouncedSearchValue;
     }
 
     return params;
@@ -446,23 +366,55 @@ const DisplayExplorer = ({
     },
     enabled:
       filtersInitialized &&
-      hasRequiredSelections
+      hasRequiredSelections,
+    placeholderData: (
+      previousData
+    ) => previousData
   });
 
   const records = useMemo(
     () =>
       normalizeRecordListResponse(
-        recordListData
+        recordListData,
+        selectedRegions
       ),
-    [recordListData]
+    [
+      recordListData,
+      selectedRegions
+    ]
   );
 
   const groupedRegions = useMemo(
-    () => groupPlanogramRecords(records),
+    () =>
+      groupPlanogramRecords(records),
     [records]
   );
 
   const stats = useMemo(() => {
+    const responseStats =
+      recordListData?.stats;
+
+    if (responseStats) {
+      return {
+        skus:
+          Number(
+            responseStats.total_skus
+          ) || 0,
+        stores:
+          Number(
+            responseStats.total_stores
+          ) || 0,
+        regions:
+          Number(
+            responseStats.total_regions
+          ) || 0,
+        totalUnits:
+          Number(
+            responseStats.total_units
+          ) || 0
+      };
+    }
+
     const storesSet = new Set();
     const regionsSet = new Set();
 
@@ -480,7 +432,7 @@ const DisplayExplorer = ({
       regions: regionsSet.size,
       totalUnits
     };
-  }, [records]);
+  }, [recordListData, records]);
 
   useEffect(() => {
     if (groupedRegions.length === 0) {
@@ -490,17 +442,20 @@ const DisplayExplorer = ({
 
     setExpandedRegions(
       (currentExpandedRegions) => {
-        const visibleRegionNames = new Set(
-          groupedRegions.map(
-            (region) => region.name
-          )
-        );
+        const visibleRegionNames =
+          new Set(
+            groupedRegions.map(
+              (region) => region.name
+            )
+          );
 
         const validExpandedRegions =
           Array.from(
             currentExpandedRegions
           ).filter((regionName) =>
-            visibleRegionNames.has(regionName)
+            visibleRegionNames.has(
+              regionName
+            )
           );
 
         if (
@@ -531,16 +486,21 @@ const DisplayExplorer = ({
   const toggleRegion = (regionName) => {
     setExpandedRegions(
       (currentExpandedRegions) => {
-        const updatedRegions = new Set(
-          currentExpandedRegions
-        );
+        const updatedRegions =
+          new Set(
+            currentExpandedRegions
+          );
 
         if (
           updatedRegions.has(regionName)
         ) {
-          updatedRegions.delete(regionName);
+          updatedRegions.delete(
+            regionName
+          );
         } else {
-          updatedRegions.add(regionName);
+          updatedRegions.add(
+            regionName
+          );
         }
 
         return updatedRegions;
@@ -548,10 +508,25 @@ const DisplayExplorer = ({
     );
   };
 
-  const clearFilters = () => {
-    setSelectedRegions([]);
-    setSelectedStores([]);
-    setSelectedTableTypes([]);
+  const resetFilters = () => {
+    setSelectedRegions(
+      regionOptions.map(
+        (option) => option.value
+      )
+    );
+
+    setSelectedStores(
+      storeOptions.map(
+        (option) => option.value
+      )
+    );
+
+    setSelectedTableTypes(
+      tableTypeOptions.map(
+        (option) => option.value
+      )
+    );
+
     setSearchValue("");
     setDebouncedSearchValue("");
   };
@@ -575,8 +550,8 @@ const DisplayExplorer = ({
       <nav className="de-tabs">
         <ButtonBase
           className={`de-tab ${activeTab === "overview"
-              ? "is-active"
-              : ""
+            ? "is-active"
+            : ""
             }`}
           onClick={() =>
             setActiveTab("overview")
@@ -587,8 +562,8 @@ const DisplayExplorer = ({
 
         <ButtonBase
           className={`de-tab ${activeTab === "explorer"
-              ? "is-active"
-              : ""
+            ? "is-active"
+            : ""
             }`}
           onClick={() =>
             setActiveTab("explorer")
@@ -599,7 +574,7 @@ const DisplayExplorer = ({
       </nav>
 
       {activeTab === "overview" ? (
-        overviewContent
+        <DisplayOverview />
       ) : (
         <main className="de-content">
           <section className="de-filter-card">
@@ -610,8 +585,12 @@ const DisplayExplorer = ({
                 searchPlaceholder="Search regions..."
                 options={regionOptions}
                 value={selectedRegions}
-                onChange={setSelectedRegions}
-                loading={isRegionsLoading}
+                onChange={
+                  setSelectedRegions
+                }
+                loading={
+                  isRegionsLoading
+                }
                 error={isRegionsError}
               />
 
@@ -621,8 +600,12 @@ const DisplayExplorer = ({
                 searchPlaceholder="Search stores..."
                 options={storeOptions}
                 value={selectedStores}
-                onChange={setSelectedStores}
-                loading={isStoresLoading}
+                onChange={
+                  setSelectedStores
+                }
+                loading={
+                  isStoresLoading
+                }
                 error={isStoresError}
               />
 
@@ -630,15 +613,21 @@ const DisplayExplorer = ({
                 label="Table Type"
                 allLabel="All Types"
                 searchPlaceholder="Search types..."
-                options={tableTypeOptions}
-                value={selectedTableTypes}
+                options={
+                  tableTypeOptions
+                }
+                value={
+                  selectedTableTypes
+                }
                 onChange={
                   setSelectedTableTypes
                 }
                 loading={
                   isTableTypesLoading
                 }
-                error={isTableTypesError}
+                error={
+                  isTableTypesError
+                }
               />
 
               <div className="de-filter-control">
@@ -654,7 +643,9 @@ const DisplayExplorer = ({
                       size={17}
                     />
                   ) : (
-                    <IconSearch size={18} />
+                    <IconSearch
+                      size={18}
+                    />
                   )}
 
                   <InputBase
@@ -671,7 +662,9 @@ const DisplayExplorer = ({
                   {searchValue && (
                     <ButtonBase
                       className="de-search-clear"
-                      onClick={clearSearch}
+                      onClick={
+                        clearSearch
+                      }
                     >
                       <IconX
                         size={15}
@@ -685,9 +678,10 @@ const DisplayExplorer = ({
 
             <ButtonBase
               className="de-clear-button"
-              onClick={clearFilters}
+              onClick={resetFilters}
             >
               Clear All
+
               <IconX
                 size={13}
                 stroke={2.5}
@@ -712,7 +706,9 @@ const DisplayExplorer = ({
             />
 
             <StatItem
-              value={stats.totalUnits}
+              value={
+                stats.totalUnits
+              }
               label="Total Units"
             />
           </section>
@@ -720,19 +716,21 @@ const DisplayExplorer = ({
           <section className="de-region-list">
             {filterOptionsLoading ? (
               <div className="de-empty-state">
-                Loading display filters...
+                Loading display
+                filters...
               </div>
             ) : filterOptionsError ? (
               <div className="de-empty-state">
-                Unable to load display
-                filters.
+                Unable to load
+                display filters.
               </div>
             ) : !hasRequiredSelections ? (
               <div className="de-empty-state">
-                Select at least one region,
-                store and table type.
+                Select at least one
+                region, store and table
+                type.
               </div>
-            ) : recordsAreLoading &&
+            ) : isRecordsLoading &&
               records.length === 0 ? (
               <div className="de-empty-state">
                 <CircularProgress
@@ -740,32 +738,39 @@ const DisplayExplorer = ({
                 />
 
                 <div>
-                  Loading display records...
+                  Loading display
+                  records...
                 </div>
               </div>
             ) : isRecordsError ? (
               <div className="de-empty-state">
-                Failed to load records:{" "}
+                Failed to load
+                records:{" "}
                 {recordsError?.message ||
                   "Unknown error"}
               </div>
-            ) : groupedRegions.length > 0 ? (
-              groupedRegions.map((region) => (
-                <DisplayRegionAccordion
-                  key={region.name}
-                  region={region}
-                  expanded={expandedRegions.has(
-                    region.name
-                  )}
-                  onToggle={() =>
-                    toggleRegion(region.name)
-                  }
-                />
-              ))
+            ) : groupedRegions.length >
+              0 ? (
+              groupedRegions.map(
+                (region) => (
+                  <DisplayRegionAccordion
+                    key={region.name}
+                    region={region}
+                    expanded={expandedRegions.has(
+                      region.name
+                    )}
+                    onToggle={() =>
+                      toggleRegion(
+                        region.name
+                      )
+                    }
+                  />
+                )
+              )
             ) : (
               <div className="de-empty-state">
-                No matching display records
-                found.
+                No matching display
+                records found.
               </div>
             )}
           </section>
