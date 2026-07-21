@@ -26,60 +26,67 @@ import Paper from '@mui/material/Paper';
 // project imports
 import MainCard from 'ui-component/cards/MainCard';
 import useAxios from '../../api/useAxios';
-import regionSchema from './regionSchema';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import categorySchema from './categorySchema';
 
-export default function RegionPage() {
+export default function CategoryPage() {
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const api = useAxios();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['region-list'],
+    queryKey: ['category-list'],
     queryFn: async () => {
-      const response = await api.get(`/api/inventory/region-list`);
+      const response = await api.get(`/api/inventory/category-list`);
       return response.data;
     }
   });
 
-  const createRegionMutation = useMutation({
+  const createCategoryMutation = useMutation({
     mutationFn: async (values) => {
-      const response = await api.post(`/api/inventory/region-create`, values);
+      const payload = {
+        name: values.name,
+      };
+      const response = await api.post(`/api/inventory/category-create`, payload);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['region-list'] });
+      queryClient.invalidateQueries({ queryKey: ['category-list'] });
       setOpen(false);
-      setSelectedRegion(null);
+      setSelectedCategory(null);
     }
   });
 
-  const updateRegionMutation = useMutation({
+  const updateCategoryMutation = useMutation({
     mutationFn: async (values) => {
-      const response = await api.patch(`/api/inventory/region-detail/${selectedRegion?.id}`, values);
+      const payload = {
+        id: selectedCategory?.id,
+        name: values.name,
+      };
+      const response = await api.patch(`/api/inventory/category-detail/${selectedCategory?.id}`, payload);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['region-list'] });
+      queryClient.invalidateQueries({ queryKey: ['category-list'] });
       setOpen(false);
-      setSelectedRegion(null);
+      setSelectedCategory(null);
     }
   });
 
-  const deleteRegionMutation = useMutation({
-    mutationFn: async (regionId) => {
-      const response = await api.delete(`/api/inventory/region-detail/${regionId}`);
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId) => {
+      const response = await api.delete(`/api/inventory/category-detail/${categoryId}`);
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['region-list'] });
+      queryClient.invalidateQueries({ queryKey: ['category-list'] });
     }
   });
 
-  const regions = useMemo(() => {
+  const categories = useMemo(() => {
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.results)) return data.results;
     if (Array.isArray(data?.data)) return data.data;
@@ -87,31 +94,31 @@ export default function RegionPage() {
   }, [data]);
 
   const handleOpenCreate = () => {
-    setSelectedRegion(null);
+    setSelectedCategory(null);
     setOpen(true);
   };
 
-  const handleOpenEdit = (region) => {
-    setSelectedRegion(region);
+  const handleOpenEdit = (category) => {
+    setSelectedCategory(category);
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
-    setSelectedRegion(null);
+    setSelectedCategory(null);
   };
 
-  const handleDelete = (region) => {
-    setSelectedRegion(region);
+  const handleDelete = (category) => {
+    setSelectedCategory(category);
     setDeleteOpen(true);
   };
 
   const handleDeleteConfirm = () => {
-    if (selectedRegion?.id) {
-      deleteRegionMutation.mutate(selectedRegion.id, {
+    if (selectedCategory?.id) {
+      deleteCategoryMutation.mutate(selectedCategory.id, {
         onSuccess: () => {
           setDeleteOpen(false);
-          setSelectedRegion(null);
+          setSelectedCategory(null);
         }
       });
     }
@@ -119,15 +126,15 @@ export default function RegionPage() {
 
   const handleDeleteClose = () => {
     setDeleteOpen(false);
-    setSelectedRegion(null);
+    setSelectedCategory(null);
   };
 
   return (
     <>
-      <MainCard title="Regions" secondary={<Button variant="contained" onClick={handleOpenCreate}>Add Region</Button>}>
+      <MainCard title="Categories" secondary={<Button variant="contained" onClick={handleOpenCreate}>Add Category</Button>}>
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
-            Manage your regions and monitor regional inventory coverage.
+            Manage your Categories and their catalog details.
           </Typography>
           <TableContainer component={Paper} variant="outlined">
             {isLoading ? (
@@ -136,35 +143,29 @@ export default function RegionPage() {
               </Stack>
             ) : isError ? (
               <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <Typography color="error">Failed to load regions: {error?.message || 'Unknown error'}</Typography>
+                <Typography color="error">Failed to load categories: {error?.message || 'Unknown error'}</Typography>
               </Stack>
             ) : (
               <Table size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Description</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {regions.length > 0 ? (
-                    regions.map((region, index) => {
-                      const name = region?.name || `Region ${index + 1}`;
-                      const status = region?.is_active ? 'Active' : 'Inactive';
-                      const description = region?.description || '-';
+                  {categories.length > 0 ? (
+                    categories.map((category, index) => {
+                      const name = category?.name;
 
                       return (
-                        <TableRow key={region?.id || `${name}-${index}`} hover>
+                        <TableRow key={category?.id || `${name}-${index}`} hover>
                           <TableCell>{name}</TableCell>
-                          <TableCell>{status}</TableCell>
-                          <TableCell>{description}</TableCell>
                           <TableCell align="right">
-                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(region)}>
+                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(category)}>
                               <EditOutlinedIcon fontSize="small" />
                             </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDelete(region)}>
+                            <IconButton size="small" color="error" onClick={() => handleDelete(category)}>
                               <DeleteOutlineOutlinedIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
@@ -174,7 +175,7 @@ export default function RegionPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={4} align="center">
-                        No regions found.
+                        No Categories found.
                       </TableCell>
                     </TableRow>
                   )}
@@ -186,34 +187,34 @@ export default function RegionPage() {
       </MainCard>
 
       <Dialog open={deleteOpen} onClose={handleDeleteClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Delete Region</DialogTitle>
+        <DialogTitle>Delete Category</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete <strong>{selectedRegion?.name || 'this region'}</strong>?
+            Are you sure you want to delete <strong>{selectedCategory?.name || 'this category'}</strong>?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleDeleteClose}>No</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteRegionMutation.isPending}>
-            {deleteRegionMutation.isPending ? 'Deleting...' : 'Yes'}
+          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteCategoryMutation.isPending}>
+            {deleteCategoryMutation.isPending ? 'Deleting...' : 'Yes'}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{selectedRegion ? 'Edit Region' : 'Add Region'}</DialogTitle>
+        <DialogTitle>{selectedCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
         <DialogContent>
           <Formik
-            initialValues={{ name: selectedRegion?.name || '', description: selectedRegion?.description || '' }}
+            initialValues={{ name: selectedCategory?.name || '', description: selectedCategory?.description || '' }}
             enableReinitialize
-            validationSchema={regionSchema}
+            validationSchema={categorySchema}
             onSubmit={(values, { resetForm }) => {
-              if (selectedRegion?.id) {
-                updateRegionMutation.mutate(values, {
+              if (selectedCategory?.id) {
+                updateCategoryMutation.mutate(values, {
                   onSuccess: () => resetForm()
                 });
               } else {
-                createRegionMutation.mutate(values, {
+                createCategoryMutation.mutate(values, {
                   onSuccess: () => resetForm()
                 });
               }
@@ -222,41 +223,22 @@ export default function RegionPage() {
             {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
               <form onSubmit={handleSubmit}>
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                <FormControl fullWidth error={Boolean(touched.name && errors.name)}>
-                  <InputLabel htmlFor="region-name">Name</InputLabel>
-                  <OutlinedInput
-                    id="region-name"
-                    name="name"
-                    label="Name"
-                    value={values.name}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                  />
-                  {touched.name && errors.name && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.name}
-                    </Typography>
-                  )}
-                </FormControl>
-
-                <FormControl fullWidth error={Boolean(touched.description && errors.description)}>
-                  <InputLabel htmlFor="region-description">Description</InputLabel>
-                  <OutlinedInput
-                    id="region-description"
-                    name="description"
-                    label="Description"
-                    multiline
-                    minRows={3}
-                    value={values.description}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                  />
-                  {touched.description && errors.description && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.description}
-                    </Typography>
-                  )}
-                </FormControl>
+                  <FormControl fullWidth error={Boolean(touched.name && errors.name)}>
+                    <InputLabel htmlFor="category-name">Name</InputLabel>
+                    <OutlinedInput
+                      id="category-name"
+                      name="name"
+                      label="Name"
+                      value={values.name}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                    {touched.name && errors.name && (
+                      <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                        {errors.name}
+                      </Typography>
+                    )}
+                  </FormControl>
                 </Stack>
               </form>
             )}
@@ -270,9 +252,9 @@ export default function RegionPage() {
               const form = document.querySelector('form');
               if (form) form.requestSubmit();
             }}
-            disabled={createRegionMutation.isPending || updateRegionMutation.isPending}
+            disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
           >
-            {createRegionMutation.isPending || updateRegionMutation.isPending ? 'Saving...' : selectedRegion ? 'Update Region' : 'Save Region'}
+            {createCategoryMutation.isPending || updateCategoryMutation.isPending ? 'Saving...' : selectedCategory ? 'Update Category' : 'Save Category'}
           </Button>
         </DialogActions>
       </Dialog>

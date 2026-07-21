@@ -19,6 +19,9 @@ const SamplePage = Loadable(lazy(() => import('views/sample-page')));
 // region routing
 const RegionPage = Loadable(lazy(() => import('views/region')));
 const StorePage = Loadable(lazy(() => import('views/store')));
+const BrandsPage = Loadable(lazy(() => import('views/brands')));
+const ProductsPage = Loadable(lazy(() => import('views/products')));
+const CategoryPage = Loadable(lazy(() => import('views/category')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -66,7 +69,19 @@ const MainRoutes = {
     {
       path: 'store',
       element: <StorePage />
-    }
+    },
+    {
+      path: 'brands',
+      element: <BrandsPage />
+    },
+    {
+      path: 'categories',
+      element: <CategoryPage />
+    },
+    {
+      path: 'products',
+      element: <ProductsPage />
+    },
   ]
 };
 

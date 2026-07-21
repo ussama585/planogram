@@ -36,9 +36,14 @@ export default function Header() {
   return (
     <>
       {/* logo & toggler button */}
-      <Box sx={{ width: downMD ? 'auto' : 228, display: 'flex' }}>
+      <Box sx={{ width: downMD ? 'auto' : 228, display: 'flex', alignItems: "center" }}>
         <Box component="span" sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
-          <LogoSection />
+          <div style={{ display: "flex", alignItems: 'center' }}>
+            <div style={{ color: "#fff", fontSize: "21px", fontWeight: "bold", marginRight: '15px' }}>st<em style={{ color: '#ff6a39', fontStyle: 'normal' }}>c</em></div>
+            <div style={{ width: "1px", height: "22px", background: 'rgba(255,255,255,0.2)', marginRight: '15px' }}></div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.65)', width: 'max-content', marginRight: '15px' }}>Planogram Dashboard · 121 Marketing</div>
+          </div>
+          {/* <LogoSection /> */}
         </Box>
         <Avatar
           variant="rounded"

@@ -1,5 +1,5 @@
 // assets
-import { IconDashboard, IconMap2, IconBuildingStore } from '@tabler/icons-react';
+import { IconDashboard, IconMap2, IconBuildingStore, IconBrand4chan, IconCategory, IconBox } from '@tabler/icons-react';
 
 // constant
 const icons = { IconDashboard };
@@ -8,14 +8,14 @@ const icons = { IconDashboard };
 
 const dashboard = {
   id: 'dashboard',
-  title: 'Dashboard',
+  // title: 'Dashboard',
   type: 'group',
   children: [
     {
       id: 'default',
       title: 'Dashboard',
       type: 'item',
-      url: '/dashboard/default',
+      url: '/',
       icon: icons.IconDashboard,
       breadcrumbs: false
     },
@@ -35,14 +35,30 @@ const dashboard = {
       icon: IconBuildingStore,
       breadcrumbs: false
     },
-    // {
-    //   id: 'admin-panel',
-    //   title: 'Admin Panel',
-    //   type: 'item',
-    //   url: '/admin',
-    //   icon: icons.IconDashboard,
-    //   breadcrumbs: false
-    // }
+    {
+      id: 'categories',
+      title: 'Categories',
+      type: 'item',
+      url: '/categories',
+      icon: IconCategory,
+      breadcrumbs: false
+    },
+    {
+      id: 'brands',
+      title: 'Brands',
+      type: 'item',
+      url: '/brands',
+      icon: IconBrand4chan,
+      breadcrumbs: false
+    },
+    {
+      id: 'products',
+      title: 'Products',
+      type: 'item',
+      url: '/products',
+      icon: IconBox,
+      breadcrumbs: false
+    },
   ]
 };
 
