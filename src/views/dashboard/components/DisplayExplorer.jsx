@@ -134,6 +134,21 @@ const StatItem = ({ value, label }) => {
   );
 };
 
+const getFilterParamValue = (selectedValues, options) => {
+  if (selectedValues.length === 0) {
+    return "";
+  }
+
+  if (
+    options.length > 0 &&
+    selectedValues.length === options.length
+  ) {
+    return undefined;
+  }
+
+  return selectedValues.join(",");
+};
+
 const DisplayExplorer = ({
   overviewContent = null,
   defaultExpandedRegion = "Al Kharj"
@@ -175,6 +190,11 @@ const DisplayExplorer = ({
     expandedRegions,
     setExpandedRegions
   ] = useState(new Set());
+
+  const [
+    filterRequestVersion,
+    setFilterRequestVersion
+  ] = useState(0);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -314,22 +334,43 @@ const DisplayExplorer = ({
     tableTypeOptions
   ]);
 
-  const hasRequiredSelections =
-    selectedRegions.length > 0 &&
-    selectedStores.length > 0 &&
-    selectedTableTypes.length > 0;
+  // const hasRequiredSelections =
+  //   selectedRegions.length > 0 &&
+  //   selectedStores.length > 0 &&
+  //   selectedTableTypes.length > 0;
 
   const recordListParams = useMemo(() => {
-    const params = {
-      region: selectedRegions.join(","),
-      store: selectedStores.join(","),
-      table_type:
-        selectedTableTypes.join(",")
-    };
+    const regionParam = getFilterParamValue(
+      selectedRegions,
+      regionOptions
+    );
+
+    const storeParam = getFilterParamValue(
+      selectedStores,
+      storeOptions
+    );
+
+    const tableTypeParam = getFilterParamValue(
+      selectedTableTypes,
+      tableTypeOptions
+    );
+
+    const params = {};
+
+    if (regionParam !== undefined) {
+      params.region = regionParam;
+    }
+
+    if (storeParam !== undefined) {
+      params.store = storeParam;
+    }
+
+    if (tableTypeParam !== undefined) {
+      params.table_type = tableTypeParam;
+    }
 
     if (debouncedSearchValue) {
-      params.search =
-        debouncedSearchValue;
+      params.search = debouncedSearchValue;
     }
 
     return params;
@@ -337,6 +378,9 @@ const DisplayExplorer = ({
     selectedRegions,
     selectedStores,
     selectedTableTypes,
+    regionOptions,
+    storeOptions,
+    tableTypeOptions,
     debouncedSearchValue
   ]);
 
@@ -349,10 +393,11 @@ const DisplayExplorer = ({
   } = useQuery({
     queryKey: [
       "inventory-record-list",
-      recordListParams.region,
-      recordListParams.store,
-      recordListParams.table_type,
-      recordListParams.search ?? ""
+      recordListParams.region ?? "__all_regions__",
+      recordListParams.store ?? "__all_stores__",
+      recordListParams.table_type ?? "__all_table_types__",
+      recordListParams.search ?? "",
+      filterRequestVersion
     ],
     queryFn: async () => {
       const response = await api.get(
@@ -364,12 +409,8 @@ const DisplayExplorer = ({
 
       return response.data;
     },
-    enabled:
-      filtersInitialized &&
-      hasRequiredSelections,
-    placeholderData: (
-      previousData
-    ) => previousData
+    enabled: filtersInitialized,
+    placeholderData: (previousData) => previousData
   });
 
   const records = useMemo(
@@ -510,25 +551,23 @@ const DisplayExplorer = ({
 
   const resetFilters = () => {
     setSelectedRegions(
-      regionOptions.map(
-        (option) => option.value
-      )
+      regionOptions.map((option) => option.value)
     );
 
     setSelectedStores(
-      storeOptions.map(
-        (option) => option.value
-      )
+      storeOptions.map((option) => option.value)
     );
 
     setSelectedTableTypes(
-      tableTypeOptions.map(
-        (option) => option.value
-      )
+      tableTypeOptions.map((option) => option.value)
     );
 
     setSearchValue("");
     setDebouncedSearchValue("");
+
+    setFilterRequestVersion(
+      (currentVersion) => currentVersion + 1
+    );
   };
 
   const clearSearch = () => {
@@ -544,6 +583,27 @@ const DisplayExplorer = ({
     isRecordsLoading ||
     isRecordsFetching ||
     searchIsDebouncing;
+
+  const handleRegionChange = (values) => {
+    setSelectedRegions(values);
+    setFilterRequestVersion(
+      (currentVersion) => currentVersion + 1
+    );
+  };
+
+  const handleStoreChange = (values) => {
+    setSelectedStores(values);
+    setFilterRequestVersion(
+      (currentVersion) => currentVersion + 1
+    );
+  };
+
+  const handleTableTypeChange = (values) => {
+    setSelectedTableTypes(values);
+    setFilterRequestVersion(
+      (currentVersion) => currentVersion + 1
+    );
+  };
 
   return (
     <div className="display-explorer-page">
@@ -585,12 +645,8 @@ const DisplayExplorer = ({
                 searchPlaceholder="Search regions..."
                 options={regionOptions}
                 value={selectedRegions}
-                onChange={
-                  setSelectedRegions
-                }
-                loading={
-                  isRegionsLoading
-                }
+                onChange={handleRegionChange}
+                loading={isRegionsLoading}
                 error={isRegionsError}
               />
 
@@ -600,12 +656,8 @@ const DisplayExplorer = ({
                 searchPlaceholder="Search stores..."
                 options={storeOptions}
                 value={selectedStores}
-                onChange={
-                  setSelectedStores
-                }
-                loading={
-                  isStoresLoading
-                }
+                onChange={handleStoreChange}
+                loading={isStoresLoading}
                 error={isStoresError}
               />
 
@@ -613,21 +665,11 @@ const DisplayExplorer = ({
                 label="Table Type"
                 allLabel="All Types"
                 searchPlaceholder="Search types..."
-                options={
-                  tableTypeOptions
-                }
-                value={
-                  selectedTableTypes
-                }
-                onChange={
-                  setSelectedTableTypes
-                }
-                loading={
-                  isTableTypesLoading
-                }
-                error={
-                  isTableTypesError
-                }
+                options={tableTypeOptions}
+                value={selectedTableTypes}
+                onChange={handleTableTypeChange}
+                loading={isTableTypesLoading}
+                error={isTableTypesError}
               />
 
               <div className="de-filter-control">
@@ -637,8 +679,7 @@ const DisplayExplorer = ({
 
                 <div className="de-main-search">
                   {recordsAreLoading &&
-                    filtersInitialized &&
-                    hasRequiredSelections ? (
+                    filtersInitialized ? (
                     <CircularProgress
                       size={17}
                     />
@@ -723,12 +764,6 @@ const DisplayExplorer = ({
               <div className="de-empty-state">
                 Unable to load
                 display filters.
-              </div>
-            ) : !hasRequiredSelections ? (
-              <div className="de-empty-state">
-                Select at least one
-                region, store and table
-                type.
               </div>
             ) : isRecordsLoading &&
               records.length === 0 ? (
