@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -112,6 +112,31 @@ const getOptionId = (options, currentValue) => {
   return optionByName ? String(optionByName.id) : '';
 };
 
+const getInitialRecordId = (...values) => {
+  for (const value of values) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      continue;
+    }
+
+    if (
+      typeof value === 'object' &&
+      value?.id !== undefined
+    ) {
+      return String(value.id);
+    }
+
+    if (/^\d+$/.test(String(value))) {
+      return String(value);
+    }
+  }
+
+  return '';
+};
+
 const getErrorMessage = (error) => {
   const responseData = error?.response?.data;
 
@@ -165,8 +190,10 @@ const SearchableSelectField = ({
   error,
   touched,
   loading,
+  disabled = false,
   setFieldValue,
-  setFieldTouched
+  setFieldTouched,
+  onValueChange
 }) => {
   const selectedOption =
     options.find(
@@ -179,22 +206,27 @@ const SearchableSelectField = ({
       options={options}
       value={selectedOption}
       loading={loading}
-      disabled={loading}
+      disabled={disabled || loading}
       autoHighlight
       clearOnEscape
       isOptionEqualToValue={(option, selectedValue) =>
-        String(option?.id) === String(selectedValue?.id)
+        String(option?.id) === String(selectedValue?.name)
       }
       getOptionLabel={(option) =>
-        String(option?.name || option?.id || '')
+        String(option?.name || '')
       }
       onChange={(_, selectedValue) => {
-        setFieldValue(
-          name,
-          selectedValue?.id !== undefined
-            ? String(selectedValue.id)
-            : ''
-        );
+        const nextValue =
+          selectedValue?.name !== undefined
+            ? String(selectedValue.name)
+            : '';
+
+        if (onValueChange) {
+          onValueChange(nextValue);
+          return;
+        }
+
+        setFieldValue(name, nextValue);
       }}
       onBlur={() => {
         setFieldTouched(name, true);
@@ -221,6 +253,562 @@ const SearchableSelectField = ({
         />
       )}
     />
+  );
+};
+
+const DisplayRecordFormFields = ({
+  api,
+  values,
+  errors,
+  touched,
+  handleChange,
+  handleBlur,
+  setFieldValue,
+  setFieldTouched,
+  regionOptions,
+  isRegionsLoading,
+  selectedRecord,
+  saveError
+}) => {
+  const hydrationRef = useRef({
+    record: selectedRecord,
+    store: false,
+    table_type: false,
+    product: false,
+    security_type: false
+  });
+  console.log(values,"valuesvaluesvalues")
+  useEffect(() => {
+    hydrationRef.current = {
+      record: selectedRecord,
+      store: false,
+      table_type: false,
+      product: false,
+      security_type: false
+    };
+  }, [selectedRecord]);
+
+  const {
+    data: storeOptionsData,
+    isFetching: isStoresLoading
+  } = useQuery({
+    queryKey: ['store-name-list', values.region],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/store-name-list',
+        {
+          params: {
+            region: values.region
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(values.region)
+  });
+
+  const {
+    data: tableOptionsData,
+    isFetching: isTableTypesLoading
+  } = useQuery({
+    queryKey: [
+      'table-name-list',
+      values.region,
+      values.store
+    ],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/table-name-list',
+        {
+          params: {
+            region: values.region,
+            store: values.store
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(values.region && values.store)
+  });
+
+  const {
+    data: productOptionsData,
+    isFetching: isProductsLoading
+  } = useQuery({
+    queryKey: [
+      'product-name-list',
+      values.region,
+      values.store,
+      values.table_type
+    ],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/product-name-list',
+        {
+          params: {
+            region: values.region,
+            store: values.store,
+            table_type: values.table_type
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(
+      values.region &&
+      values.store &&
+      values.table_type
+    )
+  });
+
+  const {
+    data: securityOptionsData,
+    isFetching: isSecurityTypesLoading
+  } = useQuery({
+    queryKey: [
+      'security-name-list',
+      values.region,
+      values.store,
+      values.table_type,
+      values.product
+    ],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/security-name-list',
+        {
+          params: {
+            region: values.region,
+            store: values.store,
+            table_type: values.table_type,
+            product: values.product
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(
+      values.region &&
+      values.store &&
+      values.table_type &&
+      values.product
+    )
+  });
+
+  const storeOptions = useMemo(
+    () => getListFromResponse(storeOptionsData),
+    [storeOptionsData]
+  );
+
+  const tableTypeOptions = useMemo(
+    () => getListFromResponse(tableOptionsData),
+    [tableOptionsData]
+  );
+
+  const productOptions = useMemo(
+    () => getListFromResponse(productOptionsData),
+    [productOptionsData]
+  );
+
+  const securityTypeOptions = useMemo(
+    () => getListFromResponse(securityOptionsData),
+    [securityOptionsData]
+  );
+
+  useEffect(() => {
+    if (
+      !selectedRecord ||
+      hydrationRef.current.store
+    ) {
+      return;
+    }
+
+    if (values.store) {
+      hydrationRef.current.store = true;
+      return;
+    }
+
+    if (!values.region || storeOptions.length === 0) {
+      return;
+    }
+
+    const storeId = getOptionId(
+      storeOptions,
+      selectedRecord?.store_id ??
+      selectedRecord?.store_name ??
+      selectedRecord?.store
+    );
+
+    hydrationRef.current.store = true;
+
+    if (storeId) {
+      setFieldValue('store', storeId, false);
+    }
+  }, [
+    selectedRecord,
+    values.region,
+    values.store,
+    storeOptions,
+    setFieldValue
+  ]);
+
+  useEffect(() => {
+    if (
+      !selectedRecord ||
+      hydrationRef.current.table_type
+    ) {
+      return;
+    }
+
+    if (values.table_type) {
+      hydrationRef.current.table_type = true;
+      return;
+    }
+
+    if (
+      !values.region ||
+      !values.store ||
+      tableTypeOptions.length === 0
+    ) {
+      return;
+    }
+
+    const tableTypeId = getOptionId(
+      tableTypeOptions,
+      selectedRecord?.table_type_id ??
+      selectedRecord?.table_type_name ??
+      selectedRecord?.table_type
+    );
+
+    hydrationRef.current.table_type = true;
+
+    if (tableTypeId) {
+      setFieldValue('table_type', tableTypeId, false);
+    }
+  }, [
+    selectedRecord,
+    values.region,
+    values.store,
+    values.table_type,
+    tableTypeOptions,
+    setFieldValue
+  ]);
+
+  useEffect(() => {
+    if (
+      !selectedRecord ||
+      hydrationRef.current.product
+    ) {
+      return;
+    }
+
+    if (values.product) {
+      hydrationRef.current.product = true;
+      return;
+    }
+
+    if (
+      !values.region ||
+      !values.store ||
+      !values.table_type ||
+      productOptions.length === 0
+    ) {
+      return;
+    }
+
+    const productId = getOptionId(
+      productOptions,
+      selectedRecord?.product_id ??
+      selectedRecord?.product_name ??
+      selectedRecord?.product
+    );
+
+    hydrationRef.current.product = true;
+
+    if (productId) {
+      setFieldValue('product', productId, false);
+    }
+  }, [
+    selectedRecord,
+    values.region,
+    values.store,
+    values.table_type,
+    values.product,
+    productOptions,
+    setFieldValue
+  ]);
+
+  useEffect(() => {
+    if (
+      !selectedRecord ||
+      hydrationRef.current.security_type
+    ) {
+      return;
+    }
+
+    if (values.security_type) {
+      hydrationRef.current.security_type = true;
+      return;
+    }
+
+    if (
+      !values.region ||
+      !values.store ||
+      !values.table_type ||
+      !values.product ||
+      securityTypeOptions.length === 0
+    ) {
+      return;
+    }
+
+    const securityTypeId = getOptionId(
+      securityTypeOptions,
+      selectedRecord?.security_type_id ??
+      selectedRecord?.security_type_name ??
+      selectedRecord?.security_type
+    );
+
+    hydrationRef.current.security_type = true;
+
+    if (securityTypeId) {
+      setFieldValue('security_type', securityTypeId, false);
+    }
+  }, [
+    selectedRecord,
+    values.region,
+    values.store,
+    values.table_type,
+    values.product,
+    values.security_type,
+    securityTypeOptions,
+    setFieldValue
+  ]);
+
+  const clearFields = (fieldNames) => {
+    fieldNames.forEach((fieldName) => {
+      setFieldValue(fieldName, '', false);
+      setFieldTouched(fieldName, false, false);
+    });
+  };
+
+  return (
+    <Stack spacing={2} sx={{ mt: 1 }}>
+      {saveError && (
+        <Alert severity="error">
+          {getErrorMessage(saveError)}
+        </Alert>
+      )}
+
+      <SearchableSelectField
+        id="display-record-region"
+        name="region"
+        label="Region"
+        value={values.region}
+        options={regionOptions}
+        loading={isRegionsLoading}
+        touched={touched.region}
+        error={errors.region}
+        setFieldValue={setFieldValue}
+        setFieldTouched={setFieldTouched}
+        onValueChange={(nextValue) => {
+          hydrationRef.current.store = true;
+          hydrationRef.current.table_type = true;
+          hydrationRef.current.product = true;
+          hydrationRef.current.security_type = true;
+          setFieldValue('region', nextValue);
+          clearFields([
+            'store',
+            'table_type',
+            'product',
+            'security_type'
+          ]);
+        }}
+      />
+
+      <SearchableSelectField
+        id="display-record-store"
+        name="store"
+        label="Store"
+        value={values.store}
+        options={storeOptions}
+        loading={isStoresLoading}
+        disabled={!values.region}
+        touched={touched.store}
+        error={errors.store}
+        setFieldValue={setFieldValue}
+        setFieldTouched={setFieldTouched}
+        onValueChange={(nextValue) => {
+          hydrationRef.current.table_type = true;
+          hydrationRef.current.product = true;
+          hydrationRef.current.security_type = true;
+          setFieldValue('store', nextValue);
+          clearFields([
+            'table_type',
+            'product',
+            'security_type'
+          ]);
+        }}
+      />
+
+      <SearchableSelectField
+        id="display-record-table-type"
+        name="table_type"
+        label="Table Type"
+        value={values.table_type}
+        options={tableTypeOptions}
+        loading={isTableTypesLoading}
+        disabled={!values.region || !values.store}
+        touched={touched.table_type}
+        error={errors.table_type}
+        setFieldValue={setFieldValue}
+        setFieldTouched={setFieldTouched}
+        onValueChange={(nextValue) => {
+          hydrationRef.current.product = true;
+          hydrationRef.current.security_type = true;
+          setFieldValue('table_type', nextValue);
+          clearFields(['product', 'security_type']);
+        }}
+      />
+
+      <SearchableSelectField
+        id="display-record-product"
+        name="product"
+        label="Product"
+        value={values.product}
+        options={productOptions}
+        loading={isProductsLoading}
+        disabled={
+          !values.region ||
+          !values.store ||
+          !values.table_type
+        }
+        touched={touched.product}
+        error={errors.product}
+        setFieldValue={setFieldValue}
+        setFieldTouched={setFieldTouched}
+        onValueChange={(nextValue) => {
+          hydrationRef.current.security_type = true;
+          setFieldValue('product', nextValue);
+          clearFields(['security_type']);
+        }}
+      />
+
+      <SearchableSelectField
+        id="display-record-security-type"
+        name="security_type"
+        label="Security Type"
+        value={values.security_type}
+        options={securityTypeOptions}
+        loading={isSecurityTypesLoading}
+        disabled={
+          !values.region ||
+          !values.store ||
+          !values.table_type ||
+          !values.product
+        }
+        touched={touched.security_type}
+        error={errors.security_type}
+        setFieldValue={setFieldValue}
+        setFieldTouched={setFieldTouched}
+      />
+
+      <FormControl
+        fullWidth
+        error={Boolean(
+          touched.table_number &&
+          errors.table_number
+        )}
+      >
+        <InputLabel htmlFor="display-record-table-number">
+          Table Number
+        </InputLabel>
+
+        <OutlinedInput
+          id="display-record-table-number"
+          name="table_number"
+          label="Table Number"
+          type="number"
+          value={values.table_number}
+          onChange={handleChange}
+          onBlur={handleBlur}
+        />
+
+        {touched.table_number &&
+          errors.table_number && (
+            <Typography
+              variant="caption"
+              color="error"
+              sx={{ mt: 0.5 }}
+            >
+              {errors.table_number}
+            </Typography>
+          )}
+      </FormControl>
+
+      <FormControl
+        fullWidth
+        error={Boolean(
+          touched.quantity && errors.quantity
+        )}
+      >
+        <InputLabel htmlFor="display-record-quantity">
+          Quantity
+        </InputLabel>
+
+        <OutlinedInput
+          id="display-record-quantity"
+          name="quantity"
+          label="Quantity"
+          type="number"
+          value={values.quantity}
+          onChange={handleChange}
+          onBlur={handleBlur}
+        />
+
+        {touched.quantity && errors.quantity && (
+          <Typography
+            variant="caption"
+            color="error"
+            sx={{ mt: 0.5 }}
+          >
+            {errors.quantity}
+          </Typography>
+        )}
+      </FormControl>
+
+      <FormControl fullWidth>
+        <InputLabel htmlFor="display-record-keyboard">
+          Keyboard
+        </InputLabel>
+
+        <OutlinedInput
+          id="display-record-keyboard"
+          name="keyboard"
+          label="Keyboard"
+          value={values.keyboard}
+          onChange={handleChange}
+          onBlur={handleBlur}
+        />
+      </FormControl>
+
+      <FormControl fullWidth>
+        <InputLabel htmlFor="display-record-pen">
+          Pen
+        </InputLabel>
+
+        <OutlinedInput
+          id="display-record-pen"
+          name="pen"
+          label="Pen"
+          value={values.pen}
+          onChange={handleChange}
+          onBlur={handleBlur}
+        />
+      </FormControl>
+    </Stack>
   );
 };
 
@@ -271,62 +859,6 @@ export default function DisplayRecordsPage() {
     }
   });
 
-  const {
-    data: storeOptionsData,
-    isLoading: isStoresLoading
-  } = useQuery({
-    queryKey: ['store-name-list'],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/store-name-list'
-      );
-
-      return response.data;
-    }
-  });
-
-  const {
-    data: tableOptionsData,
-    isLoading: isTableTypesLoading
-  } = useQuery({
-    queryKey: ['table-name-list'],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/table-name-list'
-      );
-
-      return response.data;
-    }
-  });
-
-  const {
-    data: productOptionsData,
-    isLoading: isProductsLoading
-  } = useQuery({
-    queryKey: ['product-name-list'],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/product-name-list'
-      );
-
-      return response.data;
-    }
-  });
-
-  const {
-    data: securityOptionsData,
-    isLoading: isSecurityTypesLoading
-  } = useQuery({
-    queryKey: ['security-name-list'],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/security-name-list'
-      );
-
-      return response.data;
-    }
-  });
-
   const records = useMemo(
     () => getListFromResponse(recordData),
     [recordData]
@@ -337,74 +869,40 @@ export default function DisplayRecordsPage() {
     [regionOptionsData]
   );
 
-  const storeOptions = useMemo(
-    () => getListFromResponse(storeOptionsData),
-    [storeOptionsData]
-  );
-
-  const tableTypeOptions = useMemo(
-    () => getListFromResponse(tableOptionsData),
-    [tableOptionsData]
-  );
-
-  const productOptions = useMemo(
-    () => getListFromResponse(productOptionsData),
-    [productOptionsData]
-  );
-
-  const securityTypeOptions = useMemo(
-    () => getListFromResponse(securityOptionsData),
-    [securityOptionsData]
-  );
-
-  const optionsLoading =
-    isRegionsLoading ||
-    isStoresLoading ||
-    isTableTypesLoading ||
-    isProductsLoading ||
-    isSecurityTypesLoading;
-
   const initialValues = useMemo(
     () => ({
-      region: getOptionId(
-        regionOptions,
-        selectedRecord?.region_id ??
-        selectedRecord?.region_name ??
-        selectedRecord?.region
+      region:
+        getInitialRecordId(
+          selectedRecord?.region_id,
+          selectedRecord?.region
+        ) ||
+        getOptionId(
+          regionOptions,
+          selectedRecord?.region_name ??
+          selectedRecord?.region
+        ),
+      store: getInitialRecordId(
+        selectedRecord?.store_id,
+        selectedRecord?.store
       ),
-      store: getOptionId(
-        storeOptions,
-        selectedRecord?.store_id ??
-        selectedRecord?.store_name
+      table_type: getInitialRecordId(
+        selectedRecord?.table_type_id,
+        selectedRecord?.table_type
       ),
-      table_type: getOptionId(
-        tableTypeOptions,
-        selectedRecord?.table_type_id ??
-        selectedRecord?.table_type_name
+      product: getInitialRecordId(
+        selectedRecord?.product_id,
+        selectedRecord?.product
       ),
-      product: getOptionId(
-        productOptions,
-        selectedRecord?.product_id ??
-        selectedRecord?.product_name
-      ),
-      security_type: getOptionId(
-        securityTypeOptions,
-        selectedRecord?.security_type_id ??
-        selectedRecord?.security_type_name
+      security_type: getInitialRecordId(
+        selectedRecord?.security_type_id,
+        selectedRecord?.security_type
       ),
       table_number: selectedRecord?.table_number ?? '',
       quantity: selectedRecord?.quantity ?? 1,
       keyboard: selectedRecord?.keyboard ?? '',
       pen: selectedRecord?.pen ?? ''
     }),
-    [
-      selectedRecord,
-      regionOptions,
-      storeOptions,
-      tableTypeOptions,
-      productOptions,
-      securityTypeOptions
-    ]
+    [selectedRecord, regionOptions]
   );
 
   const createRecordMutation = useMutation({
@@ -551,7 +1049,7 @@ export default function DisplayRecordsPage() {
           <Button
             variant="contained"
             onClick={handleOpenCreate}
-            disabled={optionsLoading}
+            disabled={isRegionsLoading}
           >
             Add Display Record
           </Button>
@@ -848,172 +1346,20 @@ export default function DisplayRecordsPage() {
               handleSubmit: submitForm
             }) => (
               <form onSubmit={submitForm}>
-                <Stack spacing={2} sx={{ mt: 1 }}>
-                  {saveError && (
-                    <Alert severity="error">
-                      {getErrorMessage(saveError)}
-                    </Alert>
-                  )}
-
-                  <SearchableSelectField
-                    id="display-record-region"
-                    name="region"
-                    label="Region"
-                    value={values.region}
-                    options={regionOptions}
-                    loading={isRegionsLoading}
-                    touched={touched.region}
-                    error={errors.region}
-                    setFieldValue={setFieldValue}
-                    setFieldTouched={setFieldTouched}
-                  />
-
-                  <SearchableSelectField
-                    id="display-record-store"
-                    name="store"
-                    label="Store"
-                    value={values.store}
-                    options={storeOptions}
-                    loading={isStoresLoading}
-                    touched={touched.store}
-                    error={errors.store}
-                    setFieldValue={setFieldValue}
-                    setFieldTouched={setFieldTouched}
-                  />
-
-                  <SearchableSelectField
-                    id="display-record-table-type"
-                    name="table_type"
-                    label="Table Type"
-                    value={values.table_type}
-                    options={tableTypeOptions}
-                    loading={isTableTypesLoading}
-                    touched={touched.table_type}
-                    error={errors.table_type}
-                    setFieldValue={setFieldValue}
-                    setFieldTouched={setFieldTouched}
-                  />
-
-                  <SearchableSelectField
-                    id="display-record-product"
-                    name="product"
-                    label="Product"
-                    value={values.product}
-                    options={productOptions}
-                    loading={isProductsLoading}
-                    touched={touched.product}
-                    error={errors.product}
-                    setFieldValue={setFieldValue}
-                    setFieldTouched={setFieldTouched}
-                  />
-
-                  <SearchableSelectField
-                    id="display-record-security-type"
-                    name="security_type"
-                    label="Security Type"
-                    value={values.security_type}
-                    options={securityTypeOptions}
-                    loading={isSecurityTypesLoading}
-                    touched={touched.security_type}
-                    error={errors.security_type}
-                    setFieldValue={setFieldValue}
-                    setFieldTouched={setFieldTouched}
-                  />
-
-                  <FormControl
-                    fullWidth
-                    error={Boolean(
-                      touched.table_number &&
-                      errors.table_number
-                    )}
-                  >
-                    <InputLabel htmlFor="display-record-table-number">
-                      Table Number
-                    </InputLabel>
-
-                    <OutlinedInput
-                      id="display-record-table-number"
-                      name="table_number"
-                      label="Table Number"
-                      type="number"
-                      value={values.table_number}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                    />
-
-                    {touched.table_number &&
-                      errors.table_number && (
-                        <Typography
-                          variant="caption"
-                          color="error"
-                          sx={{ mt: 0.5 }}
-                        >
-                          {errors.table_number}
-                        </Typography>
-                      )}
-                  </FormControl>
-
-                  <FormControl
-                    fullWidth
-                    error={Boolean(
-                      touched.quantity && errors.quantity
-                    )}
-                  >
-                    <InputLabel htmlFor="display-record-quantity">
-                      Quantity
-                    </InputLabel>
-
-                    <OutlinedInput
-                      id="display-record-quantity"
-                      name="quantity"
-                      label="Quantity"
-                      type="number"
-                      value={values.quantity}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                    />
-
-                    {touched.quantity && errors.quantity && (
-                      <Typography
-                        variant="caption"
-                        color="error"
-                        sx={{ mt: 0.5 }}
-                      >
-                        {errors.quantity}
-                      </Typography>
-                    )}
-                  </FormControl>
-
-                  <FormControl fullWidth>
-                    <InputLabel htmlFor="display-record-keyboard">
-                      Keyboard
-                    </InputLabel>
-
-                    <OutlinedInput
-                      id="display-record-keyboard"
-                      name="keyboard"
-                      label="Keyboard"
-                      value={values.keyboard}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                    />
-                  </FormControl>
-
-                  <FormControl fullWidth>
-                    <InputLabel htmlFor="display-record-pen">
-                      Pen
-                    </InputLabel>
-
-                    <OutlinedInput
-                      id="display-record-pen"
-                      name="pen"
-                      label="Pen"
-                      value={values.pen}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                    />
-                  </FormControl>
-                </Stack>
+                <DisplayRecordFormFields
+                  api={api}
+                  values={values}
+                  errors={errors}
+                  touched={touched}
+                  handleChange={handleChange}
+                  handleBlur={handleBlur}
+                  setFieldValue={setFieldValue}
+                  setFieldTouched={setFieldTouched}
+                  regionOptions={regionOptions}
+                  isRegionsLoading={isRegionsLoading}
+                  selectedRecord={selectedRecord}
+                  saveError={saveError}
+                />
               </form>
             )}
           </Formik>
@@ -1027,7 +1373,7 @@ export default function DisplayRecordsPage() {
           <Button
             variant="contained"
             onClick={() => formikRef.current?.submitForm()}
-            disabled={isSaving || optionsLoading}
+            disabled={isSaving || isRegionsLoading}
           >
             {isSaving
               ? 'Saving...'

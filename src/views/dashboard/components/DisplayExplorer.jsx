@@ -44,9 +44,31 @@ const createOptions = (items = []) =>
       label: String(item.name)
     }));
 
+const getRegionGroupLabel = (
+  selectedRegions,
+  regionOptions
+) => {
+  if (selectedRegions.length === 1) {
+    return selectedRegions[0];
+  }
+
+  if (selectedRegions.length === 0) {
+    return "No Region Selected";
+  }
+
+  if (
+    regionOptions.length > 0 &&
+    selectedRegions.length === regionOptions.length
+  ) {
+    return "All Regions";
+  }
+
+  return "Selected Regions";
+};
+
 const normalizeRecordListResponse = (
   responseData,
-  selectedRegions
+  fallbackRegion
 ) => {
   const responseRecords =
     getListFromResponse(responseData);
@@ -68,10 +90,6 @@ const normalizeRecordListResponse = (
       record?.table_type_name ?? ""
     ).trim();
 
-    const tableNumber = String(
-      record?.table_number ?? ""
-    ).trim();
-
     const securityType = String(
       record?.security_type_name ?? ""
     ).trim();
@@ -84,14 +102,18 @@ const normalizeRecordListResponse = (
       record?.product_name ?? ""
     ).trim();
 
+    const tableNumber = String(
+      record?.table_number ?? ""
+    ).trim();
+
+    const quantityValue = Number(
+      record?.quantity
+    );
+
     const region = String(
       record?.region_name ??
       record?.region ??
-      (
-        selectedRegions.length === 1
-          ? selectedRegions[0]
-          : "Unassigned Region"
-      )
+      fallbackRegion
     ).trim();
 
     return {
@@ -101,11 +123,12 @@ const normalizeRecordListResponse = (
       branch,
       storeCode,
       storeName,
-      storeKey:
-        `${storeCode || branch}__${storeName}`,
+      storeKey: `${branch}__${storeCode}__${storeName}`,
       tableType,
       tableNumber,
-      quantity: Number(record?.quantity) || 0,
+      quantity: Number.isFinite(quantityValue)
+        ? quantityValue
+        : 0,
       securityType,
       itemCode,
       description,
@@ -115,7 +138,9 @@ const normalizeRecordListResponse = (
       ).trim(),
       pen: String(
         record?.pen ?? ""
-      ).trim()
+      ).trim(),
+      createdAt: record?.created_at ?? null,
+      updatedAt: record?.updated_at ?? null
     };
   });
 };
@@ -413,15 +438,24 @@ const DisplayExplorer = ({
     placeholderData: (previousData) => previousData
   });
 
+  const regionGroupLabel = useMemo(
+    () =>
+      getRegionGroupLabel(
+        selectedRegions,
+        regionOptions
+      ),
+    [selectedRegions, regionOptions]
+  );
+
   const records = useMemo(
     () =>
       normalizeRecordListResponse(
         recordListData,
-        selectedRegions
+        regionGroupLabel
       ),
     [
       recordListData,
-      selectedRegions
+      regionGroupLabel
     ]
   );
 
@@ -433,45 +467,51 @@ const DisplayExplorer = ({
 
   const stats = useMemo(() => {
     const responseStats =
-      recordListData?.stats;
-
-    if (responseStats) {
-      return {
-        skus:
-          Number(
-            responseStats.total_skus
-          ) || 0,
-        stores:
-          Number(
-            responseStats.total_stores
-          ) || 0,
-        regions:
-          Number(
-            responseStats.total_regions
-          ) || 0,
-        totalUnits:
-          Number(
-            responseStats.total_units
-          ) || 0
-      };
-    }
+      recordListData?.stats ?? {};
 
     const storesSet = new Set();
     const regionsSet = new Set();
 
-    let totalUnits = 0;
+    let calculatedUnits = 0;
 
     records.forEach((record) => {
       storesSet.add(record.storeKey);
       regionsSet.add(record.region);
-      totalUnits += record.quantity;
+      calculatedUnits += record.quantity;
     });
 
+    const responseCount = Number(
+      recordListData?.count
+    );
+
+    const responseStores = Number(
+      responseStats?.total_stores
+    );
+
+    const responseRegions = Number(
+      responseStats?.total_regions
+    );
+
+    const responseUnits = Number(
+      responseStats?.total_units
+    );
+
     return {
-      skus: records.length,
-      stores: storesSet.size,
-      regions: regionsSet.size,
-      totalUnits
+      skus: Number.isFinite(responseCount)
+        ? responseCount
+        : records.length,
+
+      stores: Number.isFinite(responseStores)
+        ? responseStores
+        : storesSet.size,
+
+      regions: Number.isFinite(responseRegions)
+        ? responseRegions
+        : regionsSet.size,
+
+      totalUnits: Number.isFinite(responseUnits)
+        ? responseUnits
+        : calculatedUnits
     };
   }, [recordListData, records]);
 

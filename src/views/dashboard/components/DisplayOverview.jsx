@@ -51,6 +51,152 @@ const PanelHeading = ({ title, description }) => {
   );
 };
 
+const buildOverviewData = (summaryResponse) => {
+  
+  const data = summaryResponse?.data || {};
+  const rawRegions = Array.isArray(data?.region_summary)
+    ? data.region_summary
+    : [];
+
+  const skuPerStore = [];
+  const tableTypeMap = new Map();
+  const productCoverageMap = new Map();
+  const uniqueProducts = new Set();
+
+  let totalUnits = 0;
+
+  const regionSummary = rawRegions.map((region) => {
+    const regionStores = Array.isArray(region?.stores)
+      ? region.stores
+      : [];
+
+    let regionUnits = 0;
+
+    regionStores.forEach((store) => {
+      const products = Array.isArray(store?.products)
+        ? store.products
+        : [];
+
+      skuPerStore.push({
+        store_id: store?.id,
+        store_name: store?.name || 'Unknown Store',
+        sku_count:
+          Number(store?.sku_count) || products.length
+      });
+
+      products.forEach((product) => {
+        const quantity = Number(product?.quantity) || 0;
+
+        totalUnits += quantity;
+        regionUnits += quantity;
+
+        const productKey =
+          product?.product_id ??
+          product?.sku ??
+          product?.product_name ??
+          product?.id;
+
+        if (
+          productKey !== undefined &&
+          productKey !== null &&
+          productKey !== ''
+        ) {
+          uniqueProducts.add(String(productKey));
+        }
+
+        const tableTypeName =
+          String(product?.table_type || 'Unknown');
+
+        const tableTypeRecord =
+          tableTypeMap.get(tableTypeName) || {
+            table_type_id: tableTypeName,
+            table_type_name: tableTypeName,
+            sku_count: 0
+          };
+
+        tableTypeRecord.sku_count += 1;
+
+        tableTypeMap.set(
+          tableTypeName,
+          tableTypeRecord
+        );
+
+        const coverageKey = String(
+          productKey ?? product?.id
+        );
+
+        if (!productCoverageMap.has(coverageKey)) {
+          productCoverageMap.set(coverageKey, {
+            product_id:
+              product?.product_id ??
+              product?.id ??
+              coverageKey,
+            product_name:
+              product?.product_name ||
+              'Unknown Product',
+            storeIds: new Set()
+          });
+        }
+
+        productCoverageMap
+          .get(coverageKey)
+          .storeIds.add(
+            String(store?.id ?? store?.name)
+          );
+      });
+    });
+
+    return {
+      region_id: region?.id,
+      region_name:
+        region?.name || 'Unknown Region',
+      sku_count: Number(region?.sku_count) || 0,
+      store_count:
+        Number(region?.store_count) ||
+        regionStores.length,
+      unit_count: regionUnits
+    };
+  });
+
+  const skuByTableType = Array.from(
+    tableTypeMap.values()
+  );
+
+  const topProductsByStoreCoverage =
+    Array.from(productCoverageMap.values()).map(
+      ({ storeIds, ...product }) => ({
+        ...product,
+        store_count: storeIds.size
+      })
+    );
+
+  const calculatedSkuCount = skuPerStore.reduce(
+    (total, store) =>
+      total + (Number(store?.sku_count) || 0),
+    0
+  );
+
+  return {
+    counts: {
+      total_sku:
+        Number(data?.counts?.total_sku) || calculatedSkuCount,
+      unique_products: data?.counts?.unique_products,
+      active_stores:
+        Number(data?.counts?.active_stores) ||
+        skuPerStore.length,
+      active_regions:
+        Number(data?.counts?.active_regions) ||
+        rawRegions.length,
+      table_types: data?.counts?.table_types,
+      total_units: data?.counts?.total_units
+    },
+    sku_per_store: data?.sku_per_store ?? [],
+    sku_by_table_type: data?.sku_by_table_type ?? [],
+    top_products_by_store_coverage: data?.top_products_by_store_coverage ?? [],
+    region_summary: regionSummary
+  };
+};
+
 const DisplayOverview = () => {
   const api = useAxios();
 
@@ -68,50 +214,50 @@ const DisplayOverview = () => {
     }
   });
 
-  const summaryData = summaryResponse?.data || {};
-  const counts = summaryData?.counts || {};
+  const summaryData = useMemo(
+    () => buildOverviewData(summaryResponse),
+    [summaryResponse]
+  );
+
+  const counts = summaryData.counts;
 
   const stores = useMemo(() => {
-    const items = Array.isArray(summaryData?.sku_per_store)
-      ? summaryData.sku_per_store
-      : [];
-
-    return [...items]
-      .sort((first, second) => {
-        return Number(second?.sku_count || 0) - Number(first?.sku_count || 0);
-      })
+    return [...summaryData.sku_per_store]
+      .sort(
+        (first, second) =>
+          Number(second?.sku_count || 0) -
+          Number(first?.sku_count || 0)
+      )
       .slice(0, 18);
-  }, [summaryData?.sku_per_store]);
+  }, [summaryData.sku_per_store]);
 
   const tableTypes = useMemo(() => {
-    const items = Array.isArray(summaryData?.sku_by_table_type)
-      ? summaryData.sku_by_table_type
-      : [];
-
-    return [...items].sort((first, second) => {
-      return Number(second?.sku_count || 0) - Number(first?.sku_count || 0);
-    });
-  }, [summaryData?.sku_by_table_type]);
+    return [...summaryData.sku_by_table_type].sort(
+      (first, second) =>
+        Number(second?.sku_count || 0) -
+        Number(first?.sku_count || 0)
+    );
+  }, [summaryData.sku_by_table_type]);
 
   const topProducts = useMemo(() => {
-    const items = Array.isArray(summaryData?.top_products_by_store_coverage)
-      ? summaryData.top_products_by_store_coverage
-      : [];
-
-    return [...items].sort((first, second) => {
-      return Number(second?.store_count || 0) - Number(first?.store_count || 0);
-    });
-  }, [summaryData?.top_products_by_store_coverage]);
+    return [
+      ...summaryData.top_products_by_store_coverage
+    ].sort(
+      (first, second) =>
+        Number(second?.store_count || 0) -
+        Number(first?.store_count || 0)
+    );
+  }, [
+    summaryData.top_products_by_store_coverage
+  ]);
 
   const regions = useMemo(() => {
-    const items = Array.isArray(summaryData?.region_summary)
-      ? summaryData.region_summary
-      : [];
-
-    return [...items].sort((first, second) => {
-      return Number(second?.sku_count || 0) - Number(first?.sku_count || 0);
-    });
-  }, [summaryData?.region_summary]);
+    return [...summaryData.region_summary].sort(
+      (first, second) =>
+        Number(second?.sku_count || 0) -
+        Number(first?.sku_count || 0)
+    );
+  }, [summaryData.region_summary]);
 
   const donutTableTypes = tableTypes.slice(0, 5);
   const listedTableTypes = tableTypes.slice(0, 7);
