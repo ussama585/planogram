@@ -112,6 +112,25 @@ const getOptionId = (options, currentValue) => {
   return optionByName ? String(optionByName.id) : '';
 };
 
+
+const getOptionName = (options, currentValue) => {
+  if (
+    currentValue === null ||
+    currentValue === undefined ||
+    currentValue === ''
+  ) {
+    return '';
+  }
+
+  const selectedOption = options.find(
+    (option) => String(option?.id) === String(currentValue)
+  );
+
+  return selectedOption
+    ? String(selectedOption?.name ?? selectedOption?.value ?? '')
+    : '';
+};
+
 const getInitialRecordId = (...values) => {
   for (const value of values) {
     if (
@@ -210,15 +229,15 @@ const SearchableSelectField = ({
       autoHighlight
       clearOnEscape
       isOptionEqualToValue={(option, selectedValue) =>
-        String(option?.id) === String(selectedValue?.name)
+        String(option?.id) === String(selectedValue?.id)
       }
       getOptionLabel={(option) =>
         String(option?.name || '')
       }
       onChange={(_, selectedValue) => {
         const nextValue =
-          selectedValue?.name !== undefined
-            ? String(selectedValue.name)
+          selectedValue?.id !== undefined
+            ? String(selectedValue.id)
             : '';
 
         if (onValueChange) {
@@ -277,7 +296,6 @@ const DisplayRecordFormFields = ({
     product: false,
     security_type: false
   });
-  console.log(values,"valuesvaluesvalues")
   useEffect(() => {
     hydrationRef.current = {
       record: selectedRecord,
@@ -288,114 +306,29 @@ const DisplayRecordFormFields = ({
     };
   }, [selectedRecord]);
 
+  const selectedRegionName = useMemo(
+    () => getOptionName(regionOptions, values.region),
+    [regionOptions, values.region]
+  );
+
   const {
     data: storeOptionsData,
     isFetching: isStoresLoading
   } = useQuery({
-    queryKey: ['store-name-list', values.region],
+    queryKey: ['store-name-list', selectedRegionName],
     queryFn: async () => {
       const response = await api.get(
         '/api/inventory/store-name-list',
         {
           params: {
-            region: values.region
+            region: selectedRegionName
           }
         }
       );
 
       return response.data;
     },
-    enabled: Boolean(values.region)
-  });
-
-  const {
-    data: tableOptionsData,
-    isFetching: isTableTypesLoading
-  } = useQuery({
-    queryKey: [
-      'table-name-list',
-      values.region,
-      values.store
-    ],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/table-name-list',
-        {
-          params: {
-            region: values.region,
-            store: values.store
-          }
-        }
-      );
-
-      return response.data;
-    },
-    enabled: Boolean(values.region && values.store)
-  });
-
-  const {
-    data: productOptionsData,
-    isFetching: isProductsLoading
-  } = useQuery({
-    queryKey: [
-      'product-name-list',
-      values.region,
-      values.store,
-      values.table_type
-    ],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/product-name-list',
-        {
-          params: {
-            region: values.region,
-            store: values.store,
-            table_type: values.table_type
-          }
-        }
-      );
-
-      return response.data;
-    },
-    enabled: Boolean(
-      values.region &&
-      values.store &&
-      values.table_type
-    )
-  });
-
-  const {
-    data: securityOptionsData,
-    isFetching: isSecurityTypesLoading
-  } = useQuery({
-    queryKey: [
-      'security-name-list',
-      values.region,
-      values.store,
-      values.table_type,
-      values.product
-    ],
-    queryFn: async () => {
-      const response = await api.get(
-        '/api/inventory/security-name-list',
-        {
-          params: {
-            region: values.region,
-            store: values.store,
-            table_type: values.table_type,
-            product: values.product
-          }
-        }
-      );
-
-      return response.data;
-    },
-    enabled: Boolean(
-      values.region &&
-      values.store &&
-      values.table_type &&
-      values.product
-    )
+    enabled: Boolean(selectedRegionName)
   });
 
   const storeOptions = useMemo(
@@ -403,15 +336,123 @@ const DisplayRecordFormFields = ({
     [storeOptionsData]
   );
 
+  const selectedStoreName = useMemo(
+    () => getOptionName(storeOptions, values.store),
+    [storeOptions, values.store]
+  );
+
+  const {
+    data: tableOptionsData,
+    isFetching: isTableTypesLoading
+  } = useQuery({
+    queryKey: [
+      'table-name-list',
+      selectedRegionName,
+      selectedStoreName
+    ],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/table-name-list',
+        {
+          params: {
+            region: selectedRegionName,
+            store: selectedStoreName
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(
+      selectedRegionName &&
+      selectedStoreName
+    )
+  });
+
   const tableTypeOptions = useMemo(
     () => getListFromResponse(tableOptionsData),
     [tableOptionsData]
   );
 
+  const selectedTableTypeName = useMemo(
+    () => getOptionName(tableTypeOptions, values.table_type),
+    [tableTypeOptions, values.table_type]
+  );
+
+  const {
+    data: productOptionsData,
+    isFetching: isProductsLoading
+  } = useQuery({
+    queryKey: [
+      'product-name-list',
+      selectedRegionName,
+      selectedStoreName,
+      selectedTableTypeName
+    ],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/product-name-list',
+        {
+          params: {
+            region: selectedRegionName,
+            store: selectedStoreName,
+            table_type: selectedTableTypeName
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(
+      selectedRegionName &&
+      selectedStoreName &&
+      selectedTableTypeName
+    )
+  });
+
   const productOptions = useMemo(
     () => getListFromResponse(productOptionsData),
     [productOptionsData]
   );
+
+  const selectedProductName = useMemo(
+    () => getOptionName(productOptions, values.product),
+    [productOptions, values.product]
+  );
+
+  const {
+    data: securityOptionsData,
+    isFetching: isSecurityTypesLoading
+  } = useQuery({
+    queryKey: [
+      'security-name-list',
+      selectedRegionName,
+      selectedStoreName,
+      selectedTableTypeName,
+      selectedProductName
+    ],
+    queryFn: async () => {
+      const response = await api.get(
+        '/api/inventory/security-name-list',
+        {
+          params: {
+            region: selectedRegionName,
+            store: selectedStoreName,
+            table_type: selectedTableTypeName,
+            product: selectedProductName
+          }
+        }
+      );
+
+      return response.data;
+    },
+    enabled: Boolean(
+      selectedRegionName &&
+      selectedStoreName &&
+      selectedTableTypeName &&
+      selectedProductName
+    )
+  });
 
   const securityTypeOptions = useMemo(
     () => getListFromResponse(securityOptionsData),
@@ -1090,7 +1131,6 @@ export default function DisplayRecordsPage() {
               >
                 <TableHead>
                   <TableRow>
-                    <TableCell>Region</TableCell>
                     <TableCell>Store</TableCell>
                     <TableCell>Table Type</TableCell>
                     <TableCell>Product</TableCell>
@@ -1117,11 +1157,6 @@ export default function DisplayRecordsPage() {
                         }
                         hover
                       >
-                        <TableCell>
-                          {record?.region_name ||
-                            record?.region ||
-                            '-'}
-                        </TableCell>
 
                         <TableCell>
                           {record?.store_name || '-'}
