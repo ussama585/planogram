@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Formik } from 'formik';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-// material-ui
-import { IconButton, MenuItem, Select } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
@@ -23,19 +25,127 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 
-// project imports
 import MainCard from 'ui-component/cards/MainCard';
 import useAxios from '../../api/useAxios';
 import storeSchema from './storeSchema';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+
+const normalizeImageTitles = (imageTitles) => {
+  if (Array.isArray(imageTitles)) {
+    return imageTitles.map((title) => String(title ?? '').trim());
+  }
+
+  if (typeof imageTitles === 'string') {
+    return imageTitles
+      .split(',')
+      .map((title) => title.trim());
+  }
+
+  return [];
+};
+
+const normalizeStoreImages = (store) => {
+  if (!store) return [];
+
+  const imageTitles = normalizeImageTitles(
+    store?.image_titles || store?.imageTitles
+  );
+
+  const rawImages = Array.isArray(store?.images)
+    ? store.images
+    : Array.isArray(store?.store_images)
+      ? store.store_images
+      : Array.isArray(store?.image_urls)
+        ? store.image_urls
+        : [];
+
+  return rawImages
+    .map((image, index) => {
+      if (typeof image === 'string') {
+        return {
+          url: image,
+          title: imageTitles[index] || '',
+          isObjectUrl: false
+        };
+      }
+
+      const url =
+        image?.image ||
+        image?.url ||
+        image?.image_url ||
+        image?.file ||
+        image?.path ||
+        '';
+
+      if (!url) return null;
+
+      return {
+        url,
+        title:
+          image?.title ||
+          image?.image_title ||
+          imageTitles[index] ||
+          '',
+        isObjectUrl: false
+      };
+    })
+    .filter(Boolean);
+};
+
+const buildStoreFormData = (values, storeId) => {
+  const formData = new FormData();
+
+  if (storeId) {
+    formData.append('id', storeId);
+  }
+
+  formData.append('name', values.name || '');
+  formData.append('store_code', values.store_code || '');
+  formData.append('branch_code', values.branch_code || '');
+  formData.append('region', values.region || '');
+  formData.append('city', values.city || '');
+  formData.append('area', values.area || '');
+
+  if (storeId) {
+    formData.append('region_name', values.region_name || '');
+    formData.append('is_active', String(values.is_active ?? true));
+  }
+
+  const images = Array.isArray(values.images) ? values.images : [];
+  const imageTitles = Array.isArray(values.image_titles)
+    ? values.image_titles
+    : [];
+
+  images.forEach((image, index) => {
+    formData.append(`image_data[${index}][image]`, image);
+    formData.append(
+      `image_data[${index}][image_title]`,
+      String(imageTitles[index] ?? '').trim()
+    );
+  });
+
+  return formData;
+};
 
 export default function StorePage() {
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const api = useAxios();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((image) => {
+        if (image?.isObjectUrl && image?.url) {
+          URL.revokeObjectURL(image.url);
+        }
+      });
+    };
+  }, [imagePreviews]);
 
   const { data: storeData, isLoading, isError, error } = useQuery({
     queryKey: ['store-list'],
@@ -45,14 +155,17 @@ export default function StorePage() {
     }
   });
 
-  const { data: regionOptionsData } = useQuery({
+  const {
+    data: regionOptionsData,
+    isLoading: isRegionsLoading
+  } = useQuery({
     queryKey: ['region-name-list'],
     queryFn: async () => {
       const response = await api.get('/api/inventory/region-name-list');
       return response.data;
     }
   });
-  
+
   const regionOptions = useMemo(() => {
     if (Array.isArray(regionOptionsData)) return regionOptionsData;
     return [];
@@ -63,46 +176,66 @@ export default function StorePage() {
     return [];
   }, [storeData]);
 
+  const selectedStoreImages = useMemo(
+    () => normalizeStoreImages(selectedStore),
+    [selectedStore]
+  );
+
   const createStoreMutation = useMutation({
     mutationFn: async (values) => {
-      const payload = {
-        name: values.name,
-        store_code: values.store_code,
-        branch_code: values.branch_code,
-        region: values.region,
-        city: values.city,
-        area: values.area
-      };
-      const response = await api.post('/api/inventory/store-create', payload);
+      const payload = buildStoreFormData(values);
+
+      const response = await api.post(
+        '/api/inventory/store-create',
+        payload,
+        {
+          timeout: 60000
+        }
+      );
+
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-list'] });
       setOpen(false);
       setSelectedStore(null);
+      setImagePreviews([]);
+    },
+    onError: (error) => {
+      console.error('Create store error:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data
+      });
     }
   });
 
   const updateStoreMutation = useMutation({
     mutationFn: async (values) => {
-      const payload = {
-        id: selectedStore?.id,
-        name: values.name,
-        store_code: values.store_code,
-        branch_code: values.branch_code,
-        region: values.region,
-        region_name: values.region_name,
-        city: values.city,
-        area: values.area,
-        is_active: values.is_active ?? true
-      };
-      const response = await api.patch(`/api/inventory/store-detail/${selectedStore?.id}`, payload);
+      const payload = buildStoreFormData(values, selectedStore?.id);
+
+      const response = await api.patch(
+        `/api/inventory/store-detail/${selectedStore?.id}`,
+        payload,
+        {
+          timeout: 60000
+        }
+      );
+
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-list'] });
       setOpen(false);
       setSelectedStore(null);
+      setImagePreviews([]);
+    },
+    onError: (error) => {
+      console.error('Update store error:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data
+      });
     }
   });
 
@@ -120,17 +253,22 @@ export default function StorePage() {
 
   const handleOpenCreate = () => {
     setSelectedStore(null);
+    setImagePreviews([]);
     setOpen(true);
   };
 
   const handleOpenEdit = (store) => {
+    const existingImages = normalizeStoreImages(store);
+
     setSelectedStore(store);
+    setImagePreviews(existingImages);
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
     setSelectedStore(null);
+    setImagePreviews([]);
   };
 
   const handleDelete = (store) => {
@@ -151,7 +289,14 @@ export default function StorePage() {
 
   return (
     <>
-      <MainCard title="Stores" secondary={<Button variant="contained" onClick={handleOpenCreate}>Add Store</Button>}>
+      <MainCard
+        title="Stores"
+        secondary={
+          <Button variant="contained" onClick={handleOpenCreate}>
+            Add Store
+          </Button>
+        }
+      >
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
             Manage your stores and their regional coverage.
@@ -163,7 +308,9 @@ export default function StorePage() {
               </Stack>
             ) : isError ? (
               <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <Typography color="error">Failed to load stores: {error?.message || 'Unknown error'}</Typography>
+                <Typography color="error">
+                  Failed to load stores: {error?.message || 'Unknown error'}
+                </Typography>
               </Stack>
             ) : (
               <Table size="small">
@@ -197,10 +344,18 @@ export default function StorePage() {
                           <TableCell>{city}</TableCell>
                           <TableCell>{area}</TableCell>
                           <TableCell align="right">
-                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(store)}>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleOpenEdit(store)}
+                            >
                               <EditOutlinedIcon fontSize="small" />
                             </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDelete(store)}>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDelete(store)}
+                            >
                               <DeleteOutlineOutlinedIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
@@ -225,12 +380,18 @@ export default function StorePage() {
         <DialogTitle>Delete Store</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete <strong>{selectedStore?.name || 'this store'}</strong>?
+            Are you sure you want to delete{' '}
+            <strong>{selectedStore?.name || 'this store'}</strong>?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleDeleteClose}>No</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteStoreMutation.isPending}>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteConfirm}
+            disabled={deleteStoreMutation.isPending}
+          >
             {deleteStoreMutation.isPending ? 'Deleting...' : 'Yes'}
           </Button>
         </DialogActions>
@@ -248,7 +409,9 @@ export default function StorePage() {
               region_name: selectedStore?.region_name || '',
               city: selectedStore?.city || '',
               area: selectedStore?.area || '',
-              is_active: selectedStore?.is_active ?? true
+              is_active: selectedStore?.is_active ?? true,
+              images: [],
+              image_titles: selectedStoreImages.map((image) => image.title)
             }}
             enableReinitialize
             validationSchema={storeSchema}
@@ -264,12 +427,28 @@ export default function StorePage() {
               }
             }}
           >
-            {({ values, errors, touched, handleChange, handleBlur, handleSubmit, setFieldValue }) => (
-              <form onSubmit={handleSubmit}>
+            {({
+              values,
+              errors,
+              touched,
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              setFieldValue,
+              setFieldTouched
+            }) => (
+              <form id="store-form" onSubmit={handleSubmit}>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                   <FormControl fullWidth error={Boolean(touched.name && errors.name)}>
                     <InputLabel htmlFor="store-name">Name</InputLabel>
-                    <OutlinedInput id="store-name" name="name" label="Name" value={values.name} onChange={handleChange} onBlur={handleBlur} />
+                    <OutlinedInput
+                      id="store-name"
+                      name="name"
+                      label="Name"
+                      value={values.name}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     {touched.name && errors.name && (
                       <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
                         {errors.name}
@@ -277,9 +456,19 @@ export default function StorePage() {
                     )}
                   </FormControl>
 
-                  <FormControl fullWidth error={Boolean(touched.store_code && errors.store_code)}>
+                  <FormControl
+                    fullWidth
+                    error={Boolean(touched.store_code && errors.store_code)}
+                  >
                     <InputLabel htmlFor="store-code">Store Code</InputLabel>
-                    <OutlinedInput id="store-code" name="store_code" label="Store Code" value={values.store_code} onChange={handleChange} onBlur={handleBlur} />
+                    <OutlinedInput
+                      id="store-code"
+                      name="store_code"
+                      label="Store Code"
+                      value={values.store_code}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     {touched.store_code && errors.store_code && (
                       <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
                         {errors.store_code}
@@ -287,9 +476,19 @@ export default function StorePage() {
                     )}
                   </FormControl>
 
-                  <FormControl fullWidth error={Boolean(touched.branch_code && errors.branch_code)}>
+                  <FormControl
+                    fullWidth
+                    error={Boolean(touched.branch_code && errors.branch_code)}
+                  >
                     <InputLabel htmlFor="branch-code">Branch Code</InputLabel>
-                    <OutlinedInput id="branch-code" name="branch_code" label="Branch Code" value={values.branch_code} onChange={handleChange} onBlur={handleBlur} />
+                    <OutlinedInput
+                      id="branch-code"
+                      name="branch_code"
+                      label="Branch Code"
+                      value={values.branch_code}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     {touched.branch_code && errors.branch_code && (
                       <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
                         {errors.branch_code}
@@ -297,37 +496,90 @@ export default function StorePage() {
                     )}
                   </FormControl>
 
-                  <FormControl fullWidth error={Boolean(touched.region && errors.region)}>
-                    <InputLabel id="store-region-label">Region</InputLabel>
-                    <Select
-                      labelId="store-region-label"
-                      id="store-region"
-                      name="region"
-                      label="Region"
-                      value={values.region}
-                      onChange={(event) => {
-                        const selectedRegion = regionOptions.find((option) => option?.id === event.target.value);
-                        setFieldValue('region', event.target.value);
-                        setFieldValue('region_name', selectedRegion?.name || selectedRegion?.region_name || '');
-                      }}
-                      onBlur={handleBlur}
-                    >
-                      {regionOptions.map((region) => (
-                        <MenuItem key={region?.id} value={region?.id}>
-                          {region?.name || region?.region_name || region?.title || region?.id}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {touched.region && errors.region && (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                        {errors.region}
-                      </Typography>
+                  <Autocomplete
+                    id="store-region"
+                    options={regionOptions}
+                    loading={isRegionsLoading}
+                    autoHighlight
+                    clearOnEscape
+                    value={
+                      regionOptions.find((option) => {
+                        const optionName =
+                          option?.name ||
+                          option?.region_name ||
+                          option?.title ||
+                          '';
+
+                        return (
+                          String(option?.id) === String(values.region) ||
+                          optionName === values.region_name
+                        );
+                      }) || null
+                    }
+                    isOptionEqualToValue={(option, selectedOption) =>
+                      String(option?.id) === String(selectedOption?.id)
+                    }
+                    getOptionLabel={(option) =>
+                      String(
+                        option?.name ||
+                        option?.region_name ||
+                        option?.title ||
+                        option?.id ||
+                        ''
+                      )
+                    }
+                    onChange={(_, selectedRegion) => {
+                      setFieldValue(
+                        'region',
+                        selectedRegion?.id !== undefined
+                          ? selectedRegion.id
+                          : ''
+                      );
+
+                      setFieldValue(
+                        'region_name',
+                        selectedRegion?.name ||
+                        selectedRegion?.region_name ||
+                        selectedRegion?.title ||
+                        ''
+                      );
+                    }}
+                    onBlur={() => {
+                      setFieldTouched('region', true);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        name="region"
+                        label="Region"
+                        placeholder="Search and select region"
+                        error={Boolean(touched.region && errors.region)}
+                        helperText={
+                          touched.region && errors.region ? errors.region : ''
+                        }
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {isRegionsLoading && <CircularProgress size={18} />}
+                              {params.InputProps.endAdornment}
+                            </>
+                          )
+                        }}
+                      />
                     )}
-                  </FormControl>
+                  />
 
                   <FormControl fullWidth error={Boolean(touched.city && errors.city)}>
                     <InputLabel htmlFor="store-city">City</InputLabel>
-                    <OutlinedInput id="store-city" name="city" label="City" value={values.city} onChange={handleChange} onBlur={handleBlur} />
+                    <OutlinedInput
+                      id="store-city"
+                      name="city"
+                      label="City"
+                      value={values.city}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     {touched.city && errors.city && (
                       <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
                         {errors.city}
@@ -337,13 +589,111 @@ export default function StorePage() {
 
                   <FormControl fullWidth error={Boolean(touched.area && errors.area)}>
                     <InputLabel htmlFor="store-area">Area</InputLabel>
-                    <OutlinedInput id="store-area" name="area" label="Area" value={values.area} onChange={handleChange} onBlur={handleBlur} />
+                    <OutlinedInput
+                      id="store-area"
+                      name="area"
+                      label="Area"
+                      value={values.area}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     {touched.area && errors.area && (
                       <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
                         {errors.area}
                       </Typography>
                     )}
                   </FormControl>
+
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Store Images</Typography>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<CloudUploadOutlinedIcon />}
+                      sx={{ alignSelf: 'flex-start' }}
+                    >
+                      {imagePreviews.length > 0 ? 'Change Images' : 'Select Images'}
+                      <input
+                        hidden
+                        multiple
+                        accept="image/*"
+                        type="file"
+                        onChange={(event) => {
+                          const files = Array.from(event.currentTarget.files || []);
+
+                          if (files.length === 0) return;
+
+                          const previews = files.map((file) => ({
+                            url: URL.createObjectURL(file),
+                            title: '',
+                            name: file.name,
+                            isObjectUrl: true
+                          }));
+
+                          setImagePreviews(previews);
+                          setFieldValue('images', files);
+                          setFieldValue(
+                            'image_titles',
+                            files.map(() => '')
+                          );
+                          setFieldTouched('images', true, false);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </Button>
+
+                    {imagePreviews.length > 0 && (
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                          gap: 1.5
+                        }}
+                      >
+                        {imagePreviews.map((image, index) => {
+                          const titleError = Array.isArray(errors.image_titles)
+                            ? errors.image_titles[index]
+                            : '';
+                          const titleTouched = Array.isArray(touched.image_titles)
+                            ? touched.image_titles[index]
+                            : false;
+
+                          return (
+                            <Paper
+                              key={`${image.url}-${index}`}
+                              variant="outlined"
+                              sx={{ p: 1 }}
+                            >
+                              <Box
+                                component="img"
+                                src={image.url}
+                                alt={values.image_titles[index] || `Store image ${index + 1}`}
+                                sx={{
+                                  width: '100%',
+                                  height: 100,
+                                  display: 'block',
+                                  objectFit: 'cover',
+                                  borderRadius: 1,
+                                  mb: 1
+                                }}
+                              />
+                              <TextField
+                                fullWidth
+                                size="small"
+                                name={`image_titles.${index}`}
+                                label={`Image ${index + 1} Title`}
+                                value={values.image_titles[index] || ''}
+                                onChange={handleChange}
+                                onBlur={handleBlur}
+                                error={Boolean(titleTouched && titleError)}
+                                helperText={titleTouched && titleError ? titleError : ''}
+                              />
+                            </Paper>
+                          );
+                        })}
+                      </Box>
+                    )}
+                  </Stack>
                 </Stack>
               </form>
             )}
@@ -353,13 +703,15 @@ export default function StorePage() {
           <Button onClick={handleClose}>Cancel</Button>
           <Button
             variant="contained"
-            onClick={() => {
-              const form = document.querySelector('form');
-              if (form) form.requestSubmit();
-            }}
+            type="submit"
+            form="store-form"
             disabled={createStoreMutation.isPending || updateStoreMutation.isPending}
           >
-            {createStoreMutation.isPending || updateStoreMutation.isPending ? 'Saving...' : selectedStore ? 'Update Store' : 'Save Store'}
+            {createStoreMutation.isPending || updateStoreMutation.isPending
+              ? 'Saving...'
+              : selectedStore
+                ? 'Update Store'
+                : 'Save Store'}
           </Button>
         </DialogActions>
       </Dialog>

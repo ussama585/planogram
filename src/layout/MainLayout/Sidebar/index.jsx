@@ -49,7 +49,7 @@ function Sidebar() {
       </>
     );
 
-    let drawerSX = { paddingLeft: '0px', paddingRight: '0px', marginTop: '20px', marginTop: '90px' };
+    let drawerSX = { paddingLeft: '0px', paddingRight: '0px', marginTop: '90px' };
     if (drawerOpen) drawerSX = { paddingLeft: '16px', paddingRight: '16px', marginTop: '70px' };
 
     return (

@@ -10,6 +10,44 @@
   -webkit-tap-highlight-color: transparent !important;
 }
 
+@font-face {
+  font-family: 'STC Forward';
+  src: url('../fonts/STCForward-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'STC Forward';
+  src: url('../fonts/STCForward-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'STC Forward';
+  src: url('../fonts/STCForward-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'STC Forward';
+  src: url('../fonts/STCForward-ExtraBold.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+html,
+body,
+#root {
+  font-family: 'STC Forward';
+}
+
 // ==============================|| APEXCHART ||============================== //
 
 .apexcharts-legend-series .apexcharts-legend-marker {

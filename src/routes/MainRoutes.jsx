@@ -5,19 +5,14 @@ import MainLayout from 'layout/MainLayout';
 import Loadable from 'ui-component/Loadable';
 import ProtectedRoute from './ProtectedRoute';
 import TablesPage from '../views/tables';
-import SecurityTypePage from '../views/security-types';
-import DisplayRecordsPage from '../views/display-record';
 
 // dashboard routing
 const DashboardDefault = Loadable(lazy(() => import('views/dashboard/Default')));
 
 // utilities routing
-const UtilsTypography = Loadable(lazy(() => import('views/utilities/Typography')));
-const UtilsColor = Loadable(lazy(() => import('views/utilities/Color')));
-const UtilsShadow = Loadable(lazy(() => import('views/utilities/Shadow')));
-
-// sample page routing
-const SamplePage = Loadable(lazy(() => import('views/sample-page')));
+// const UtilsTypography = Loadable(lazy(() => import('views/utilities/Typography')));
+// const UtilsColor = Loadable(lazy(() => import('views/utilities/Color')));
+// const UtilsShadow = Loadable(lazy(() => import('views/utilities/Shadow')));
 
 // region routing
 const RegionPage = Loadable(lazy(() => import('views/region')));
@@ -25,6 +20,9 @@ const StorePage = Loadable(lazy(() => import('views/store')));
 const BrandsPage = Loadable(lazy(() => import('views/brands')));
 const ProductsPage = Loadable(lazy(() => import('views/products')));
 const CategoryPage = Loadable(lazy(() => import('views/category')));
+const SecurityTypePage = Loadable(lazy(() => import('views/security-types')));
+const DisplayRecordsPage = Loadable(lazy(() => import('views/display-record')));
+const UserManagementPage = Loadable(lazy(() => import('views/user-management')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -80,6 +78,10 @@ const MainRoutes = {
     {
       path: 'display-record',
       element: <DisplayRecordsPage />
+    },
+    {
+      path: 'user-management',
+      element: <UserManagementPage />
     },
   ]
 };

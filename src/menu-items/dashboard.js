@@ -1,5 +1,5 @@
 // assets
-import { IconDashboard, IconMap2, IconBuildingStore, IconBrand4chan, IconCategory, IconBox, IconTableDashed, IconShieldCog, IconDatabase } from '@tabler/icons-react';
+import { IconDashboard, IconMap2, IconBuildingStore, IconBrand4chan, IconCategory, IconBox, IconTableDashed, IconShieldCog, IconDatabase, IconUserCog } from '@tabler/icons-react';
 
 // constant
 const icons = { IconDashboard };
@@ -81,6 +81,14 @@ const dashboard = {
       type: 'item',
       url: '/display-record',
       icon: IconDatabase,
+      breadcrumbs: false
+    },
+    {
+      id: 'user-management',
+      title: 'User Management',
+      type: 'item',
+      url: '/user-management',
+      icon: IconUserCog,
       breadcrumbs: false
     },
   ]

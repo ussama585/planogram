@@ -44,104 +44,130 @@ const createOptions = (items = []) =>
       label: String(item.name)
     }));
 
-const getRegionGroupLabel = (
-  selectedRegions,
-  regionOptions
-) => {
-  if (selectedRegions.length === 1) {
-    return selectedRegions[0];
-  }
-
-  if (selectedRegions.length === 0) {
-    return "No Region Selected";
+const getDisplayOverviewData = (responseData) => {
+  if (
+    responseData?.data &&
+    !Array.isArray(responseData.data) &&
+    typeof responseData.data === "object"
+  ) {
+    return responseData.data;
   }
 
   if (
-    regionOptions.length > 0 &&
-    selectedRegions.length === regionOptions.length
+    responseData &&
+    !Array.isArray(responseData) &&
+    typeof responseData === "object"
   ) {
-    return "All Regions";
+    return responseData;
   }
 
-  return "Selected Regions";
+  return {};
 };
 
-const normalizeRecordListResponse = (
-  responseData,
-  fallbackRegion
-) => {
-  const responseRecords =
-    getListFromResponse(responseData);
+const getFiniteNumber = (value) => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
 
-  return responseRecords.map((record, index) => {
-    const branch = String(
-      record?.branch_code ?? ""
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue)
+    ? numericValue
+    : null;
+};
+
+const normalizeDisplayOverviewResponse = (responseData) => {
+  const overviewData =
+    getDisplayOverviewData(responseData);
+
+  const regions = Array.isArray(overviewData?.regions)
+    ? overviewData.regions
+    : [];
+
+  return regions.flatMap((region, regionIndex) => {
+    const regionName = String(
+      region?.name ?? "Unassigned Region"
     ).trim();
 
-    const storeCode = String(
-      record?.store_code ?? ""
-    ).trim();
+    const stores = Array.isArray(region?.stores)
+      ? region.stores
+      : [];
 
-    const storeName = String(
-      record?.store_name ?? ""
-    ).trim();
+    return stores.flatMap((store, storeIndex) => {
+      const branch = String(
+        store?.branch_code ?? ""
+      ).trim();
 
-    const tableType = String(
-      record?.table_type_name ?? ""
-    ).trim();
+      const storeCode = String(
+        store?.store_code ?? ""
+      ).trim();
 
-    const securityType = String(
-      record?.security_type_name ?? ""
-    ).trim();
+      const storeName = String(
+        store?.name ?? "Unknown Store"
+      ).trim();
 
-    const itemCode = String(
-      record?.product_sku ?? ""
-    ).trim();
+      const products = Array.isArray(store?.products)
+        ? store.products
+        : [];
 
-    const description = String(
-      record?.product_name ?? ""
-    ).trim();
+      return products.map((product, productIndex) => {
+        const tableType = String(
+          product?.table_type ?? ""
+        ).trim();
 
-    const tableNumber = String(
-      record?.table_number ?? ""
-    ).trim();
+        const securityType = String(
+          product?.security_type ?? ""
+        ).trim();
 
-    const quantityValue = Number(
-      record?.quantity
-    );
+        const itemCode = String(
+          product?.sku ?? ""
+        ).trim();
 
-    const region = String(
-      record?.region_name ??
-      record?.region ??
-      fallbackRegion
-    ).trim();
+        const description = String(
+          product?.product_name ?? ""
+        ).trim();
 
-    return {
-      id:
-        record?.id ??
-        `${branch}-${storeCode}-${tableType}-${tableNumber}-${itemCode}-${index}`,
-      branch,
-      storeCode,
-      storeName,
-      storeKey: `${branch}__${storeCode}__${storeName}`,
-      tableType,
-      tableNumber,
-      quantity: Number.isFinite(quantityValue)
-        ? quantityValue
-        : 0,
-      securityType,
-      itemCode,
-      description,
-      region,
-      keyboard: String(
-        record?.keyboard ?? ""
-      ).trim(),
-      pen: String(
-        record?.pen ?? ""
-      ).trim(),
-      createdAt: record?.created_at ?? null,
-      updatedAt: record?.updated_at ?? null
-    };
+        const tableNumber = String(
+          product?.table_number ?? ""
+        ).trim();
+
+        const quantityValue = getFiniteNumber(
+          product?.quantity
+        );
+
+        return {
+          id:
+            product?.id ??
+            `${region?.id ?? regionIndex}-${store?.id ?? storeIndex}-${product?.product_id ?? productIndex}-${tableType}-${tableNumber}-${itemCode}`,
+          productId: product?.product_id ?? null,
+          branch,
+          storeCode,
+          storeName,
+          storeKey: `${branch}__${storeCode}__${storeName}`,
+          tableType,
+          tableNumber,
+          quantity: quantityValue ?? 0,
+          securityType,
+          itemCode,
+          description,
+          region: regionName,
+          city: String(store?.city ?? "").trim(),
+          area: String(store?.area ?? "").trim(),
+          keyboard: String(
+            product?.keyboard ?? ""
+          ).trim(),
+          pen: String(
+            product?.pen ?? ""
+          ).trim(),
+          createdAt: null,
+          updatedAt: null
+        };
+      });
+    });
   });
 };
 
@@ -417,7 +443,7 @@ const DisplayExplorer = ({
     error: recordsError
   } = useQuery({
     queryKey: [
-      "inventory-record-list",
+      "inventory-display-overview",
       recordListParams.region ?? "__all_regions__",
       recordListParams.store ?? "__all_stores__",
       recordListParams.table_type ?? "__all_table_types__",
@@ -426,7 +452,7 @@ const DisplayExplorer = ({
     ],
     queryFn: async () => {
       const response = await api.get(
-        "/api/inventory/record-list",
+        "/api/inventory/display-overview",
         {
           params: recordListParams
         }
@@ -438,25 +464,17 @@ const DisplayExplorer = ({
     placeholderData: (previousData) => previousData
   });
 
-  const regionGroupLabel = useMemo(
-    () =>
-      getRegionGroupLabel(
-        selectedRegions,
-        regionOptions
-      ),
-    [selectedRegions, regionOptions]
+  const displayOverviewData = useMemo(
+    () => getDisplayOverviewData(recordListData),
+    [recordListData]
   );
 
   const records = useMemo(
     () =>
-      normalizeRecordListResponse(
-        recordListData,
-        regionGroupLabel
+      normalizeDisplayOverviewResponse(
+        recordListData
       ),
-    [
-      recordListData,
-      regionGroupLabel
-    ]
+    [recordListData]
   );
 
   const groupedRegions = useMemo(
@@ -466,9 +484,6 @@ const DisplayExplorer = ({
   );
 
   const stats = useMemo(() => {
-    const responseStats =
-      recordListData?.stats ?? {};
-
     const storesSet = new Set();
     const regionsSet = new Set();
 
@@ -480,40 +495,25 @@ const DisplayExplorer = ({
       calculatedUnits += record.quantity;
     });
 
-    const responseCount = Number(
-      recordListData?.count
+    const responseSkuCount = getFiniteNumber(
+      displayOverviewData?.sku_count
     );
 
-    const responseStores = Number(
-      responseStats?.total_stores
+    const responseStoreCount = getFiniteNumber(
+      displayOverviewData?.store_count
     );
 
-    const responseRegions = Number(
-      responseStats?.total_regions
-    );
-
-    const responseUnits = Number(
-      responseStats?.total_units
+    const responseRegionCount = getFiniteNumber(
+      displayOverviewData?.region_count
     );
 
     return {
-      skus: Number.isFinite(responseCount)
-        ? responseCount
-        : records.length,
-
-      stores: Number.isFinite(responseStores)
-        ? responseStores
-        : storesSet.size,
-
-      regions: Number.isFinite(responseRegions)
-        ? responseRegions
-        : regionsSet.size,
-
-      totalUnits: Number.isFinite(responseUnits)
-        ? responseUnits
-        : calculatedUnits
+      skus: responseSkuCount ?? records.length,
+      stores: responseStoreCount ?? storesSet.size,
+      regions: responseRegionCount ?? regionsSet.size,
+      totalUnits: calculatedUnits
     };
-  }, [recordListData, records]);
+  }, [displayOverviewData, records]);
 
   useEffect(() => {
     if (groupedRegions.length === 0) {
