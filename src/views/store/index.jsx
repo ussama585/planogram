@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Formik } from 'formik';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -60,6 +60,7 @@ const normalizeStoreImages = (store) => {
     .map((image, index) => {
       if (typeof image === 'string') {
         return {
+          id: null,
           url: image,
           title: imageTitles[index] || '',
           isObjectUrl: false
@@ -77,6 +78,7 @@ const normalizeStoreImages = (store) => {
       if (!url) return null;
 
       return {
+        id: image?.id ?? null,
         url,
         title:
           image?.title ||
@@ -108,18 +110,50 @@ const buildStoreFormData = (values, storeId) => {
     formData.append('is_active', String(values.is_active ?? true));
   }
 
-  const images = Array.isArray(values.images) ? values.images : [];
+  const images = Array.isArray(values.images)
+    ? values.images
+    : [];
+
+  const imageIds = Array.isArray(values.image_ids)
+    ? values.image_ids
+    : [];
+
   const imageTitles = Array.isArray(values.image_titles)
     ? values.image_titles
     : [];
 
-  images.forEach((image, index) => {
-    formData.append(`image_data[${index}][image]`, image);
+  const imageCount = Math.max(
+    images.length,
+    imageIds.length,
+    imageTitles.length
+  );
+
+  for (let index = 0; index < imageCount; index += 1) {
+    const image = images[index];
+    const imageId = imageIds[index];
+    const imageTitle = String(
+      imageTitles[index] ?? ''
+    ).trim();
+
+    if (imageId) {
+      formData.append(
+        `image_data[${index}][id]`,
+        imageId
+      );
+    }
+
+    if (image instanceof File) {
+      formData.append(
+        `image_data[${index}][image]`,
+        image
+      );
+    }
+
     formData.append(
       `image_data[${index}][image_title]`,
-      String(imageTitles[index] ?? '').trim()
+      imageTitle
     );
-  });
+  }
 
   return formData;
 };
@@ -160,15 +194,21 @@ export default function StorePage() {
     setPage(0);
   }, []);
 
+  const imagePreviewsRef = useRef([]);
+
+  useEffect(() => {
+    imagePreviewsRef.current = imagePreviews;
+  }, [imagePreviews]);
+
   useEffect(() => {
     return () => {
-      imagePreviews.forEach((image) => {
+      imagePreviewsRef.current.forEach((image) => {
         if (image?.isObjectUrl && image?.url) {
           URL.revokeObjectURL(image.url);
         }
       });
     };
-  }, [imagePreviews]);
+  }, []);
 
   const {
     data: storeData,
@@ -461,7 +501,8 @@ export default function StorePage() {
               city: selectedStore?.city || '',
               area: selectedStore?.area || '',
               is_active: selectedStore?.is_active ?? true,
-              images: [],
+              images: selectedStoreImages.map(() => null),
+              image_ids: selectedStoreImages.map((image) => image.id),
               image_titles: selectedStoreImages.map((image) => image.title)
             }}
             enableReinitialize
@@ -670,23 +711,40 @@ export default function StorePage() {
                         accept="image/*"
                         type="file"
                         onChange={(event) => {
-                          const files = Array.from(event.currentTarget.files || []);
+                          const files = Array.from(
+                            event.currentTarget.files || []
+                          );
 
                           if (files.length === 0) return;
 
-                          const previews = files.map((file) => ({
+                          const newPreviews = files.map((file) => ({
+                            id: null,
                             url: URL.createObjectURL(file),
                             title: '',
                             name: file.name,
                             isObjectUrl: true
                           }));
 
-                          setImagePreviews(previews);
-                          setFieldValue('images', files);
-                          setFieldValue(
-                            'image_titles',
-                            files.map(() => '')
-                          );
+                          setImagePreviews((currentPreviews) => [
+                            ...currentPreviews,
+                            ...newPreviews
+                          ]);
+
+                          setFieldValue('images', [
+                            ...values.images,
+                            ...files
+                          ]);
+
+                          setFieldValue('image_ids', [
+                            ...values.image_ids,
+                            ...files.map(() => null)
+                          ]);
+
+                          setFieldValue('image_titles', [
+                            ...values.image_titles,
+                            ...files.map(() => '')
+                          ]);
+
                           setFieldTouched('images', true, false);
                           event.currentTarget.value = '';
                         }}
@@ -728,6 +786,76 @@ export default function StorePage() {
                                   mb: 1
                                 }}
                               />
+                              <Button
+                                component="label"
+                                size="small"
+                                variant="outlined"
+                                fullWidth
+                                sx={{ mb: 1 }}
+                              >
+                                Replace Image
+
+                                <input
+                                  hidden
+                                  accept="image/*"
+                                  type="file"
+                                  onChange={(event) => {
+                                    const file =
+                                      event.currentTarget.files?.[0];
+
+                                    if (!file) return;
+
+                                    const previewUrl =
+                                      URL.createObjectURL(file);
+
+                                    setImagePreviews((currentPreviews) => {
+                                      const updatedPreviews = [
+                                        ...currentPreviews
+                                      ];
+
+                                      const currentImage =
+                                        updatedPreviews[index];
+
+                                      if (
+                                        currentImage?.isObjectUrl &&
+                                        currentImage?.url
+                                      ) {
+                                        URL.revokeObjectURL(
+                                          currentImage.url
+                                        );
+                                      }
+
+                                      updatedPreviews[index] = {
+                                        ...currentImage,
+                                        url: previewUrl,
+                                        name: file.name,
+                                        isObjectUrl: true
+                                      };
+
+                                      return updatedPreviews;
+                                    });
+
+                                    const updatedImages = [
+                                      ...values.images
+                                    ];
+
+                                    updatedImages[index] = file;
+
+                                    setFieldValue(
+                                      'images',
+                                      updatedImages
+                                    );
+
+                                    setFieldTouched(
+                                      `images.${index}`,
+                                      true,
+                                      false
+                                    );
+
+                                    event.currentTarget.value = '';
+                                  }}
+                                />
+                              </Button>
                               <TextField
                                 fullWidth
                                 size="small"
