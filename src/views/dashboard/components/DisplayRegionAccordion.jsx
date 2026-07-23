@@ -198,15 +198,18 @@ const StoreSection = ({ store }) => {
               title={`View ${images.length} store ${images.length === 1 ? "image" : "images"
                 }`}
               sx={{
+                border: "1px solid #fff",
+                padding: "3px 3px",
+                borderRadius: "3px",
                 marginLeft: 2,
-                color: "primary.main",
+                color: "#fff",
                 backgroundColor: "action.hover",
                 "&:hover": {
                   backgroundColor: "action.selected"
                 }
               }}
             >
-              <IconPhoto size={19} stroke={2} />
+              <IconPhoto size={19} stroke={2} style={{ marginRight: "2px" }} /> Store Images
             </ButtonBase>
           )}
         </div>

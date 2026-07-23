@@ -59,11 +59,16 @@ const normalizeStoreImages = (store) => {
   return rawImages
     .map((image, index) => {
       if (typeof image === 'string') {
+        const title = imageTitles[index] || '';
+
         return {
           id: null,
           url: image,
-          title: imageTitles[index] || '',
-          isObjectUrl: false
+          file: null,
+          title,
+          originalTitle: title,
+          isObjectUrl: false,
+          isNew: false
         };
       }
 
@@ -77,21 +82,30 @@ const normalizeStoreImages = (store) => {
 
       if (!url) return null;
 
+      const title =
+        image?.title ||
+        image?.image_title ||
+        imageTitles[index] ||
+        '';
+
       return {
         id: image?.id ?? null,
         url,
-        title:
-          image?.title ||
-          image?.image_title ||
-          imageTitles[index] ||
-          '',
-        isObjectUrl: false
+        file: null,
+        title,
+        originalTitle: title,
+        isObjectUrl: false,
+        isNew: false
       };
     })
     .filter(Boolean);
 };
 
-const buildStoreFormData = (values, storeId) => {
+const buildStoreFormData = (
+  values,
+  newImages = [],
+  storeId = null
+) => {
   const formData = new FormData();
 
   if (storeId) {
@@ -106,54 +120,30 @@ const buildStoreFormData = (values, storeId) => {
   formData.append('area', values.area || '');
 
   if (storeId) {
-    formData.append('region_name', values.region_name || '');
-    formData.append('is_active', String(values.is_active ?? true));
+    formData.append(
+      'region_name',
+      values.region_name || ''
+    );
+
+    formData.append(
+      'is_active',
+      String(values.is_active ?? true)
+    );
   }
 
-  const images = Array.isArray(values.images)
-    ? values.images
-    : [];
+  newImages.forEach((image, index) => {
+    if (!(image.file instanceof File)) return;
 
-  const imageIds = Array.isArray(values.image_ids)
-    ? values.image_ids
-    : [];
-
-  const imageTitles = Array.isArray(values.image_titles)
-    ? values.image_titles
-    : [];
-
-  const imageCount = Math.max(
-    images.length,
-    imageIds.length,
-    imageTitles.length
-  );
-
-  for (let index = 0; index < imageCount; index += 1) {
-    const image = images[index];
-    const imageId = imageIds[index];
-    const imageTitle = String(
-      imageTitles[index] ?? ''
-    ).trim();
-
-    if (imageId) {
-      formData.append(
-        `image_data[${index}][id]`,
-        imageId
-      );
-    }
-
-    if (image instanceof File) {
-      formData.append(
-        `image_data[${index}][image]`,
-        image
-      );
-    }
+    formData.append(
+      `image_data[${index}][image]`,
+      image.file
+    );
 
     formData.append(
       `image_data[${index}][image_title]`,
-      imageTitle
+      String(image.title || '').trim()
     );
-  }
+  });
 
   return formData;
 };
@@ -328,7 +318,15 @@ export default function StorePage() {
 
   const createStoreMutation = useMutation({
     mutationFn: async (values) => {
-      const payload = buildStoreFormData(values);
+      const newImages = imagePreviews.filter(
+        (image) =>
+          image.file instanceof File
+      );
+
+      const payload = buildStoreFormData(
+        values,
+        newImages
+      );
 
       const response = await api.post(
         '/api/inventory/store-create',
@@ -340,41 +338,67 @@ export default function StorePage() {
 
       return response.data;
     },
+
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['store-list'] });
+      queryClient.invalidateQueries({
+        queryKey: ['store-list']
+      });
+
       setOpen(false);
       setSelectedStore(null);
       setImagePreviews([]);
-    },
-    onError: (error) => {
-      console.error('Create store error:', {
-        message: error?.message,
-        status: error?.response?.status,
-        data: error?.response?.data
-      });
     }
   });
 
   const updateStoreMutation = useMutation({
     mutationFn: async (values) => {
-      const payload = buildStoreFormData(values, selectedStore?.id);
+      const newImages = imagePreviews.filter(
+        (image) =>
+          !image.id &&
+          image.file instanceof File
+      );
 
-      const response = await api.patch(
+      const changedExistingImages =
+        getChangedExistingImages();
+
+      const storePayload =
+        buildStoreFormData(
+          values,
+          newImages,
+          selectedStore?.id
+        );
+
+      const storeResponse = await api.patch(
         `/api/inventory/store-detail/${selectedStore?.id}`,
-        payload,
+        storePayload,
         {
           timeout: 60000
         }
       );
 
-      return response.data;
+      await Promise.all(
+        changedExistingImages.map(
+          updateExistingStoreImage
+        )
+      );
+
+      return storeResponse.data;
     },
+
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['store-list'] });
+      queryClient.invalidateQueries({
+        queryKey: ['store-list']
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['inventory-display-overview']
+      });
+
       setOpen(false);
       setSelectedStore(null);
       setImagePreviews([]);
     },
+
     onError: (error) => {
       console.error('Update store error:', {
         message: error?.message,
@@ -383,6 +407,46 @@ export default function StorePage() {
       });
     }
   });
+
+  const deleteStoreImageMutation = useMutation({
+    mutationFn: async (imageId) => {
+      const response = await api.delete(
+        `/api/inventory/store-image/${imageId}`
+      );
+
+      return response.data;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['store-list']
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['inventory-display-overview']
+      });
+    }
+  });
+
+  const removeLocalImage = (imageIndex) => {
+    setImagePreviews((currentImages) => {
+      const removedImage =
+        currentImages[imageIndex];
+
+      if (
+        removedImage?.isObjectUrl &&
+        removedImage?.url
+      ) {
+        URL.revokeObjectURL(
+          removedImage.url
+        );
+      }
+
+      return currentImages.filter(
+        (_, index) => index !== imageIndex
+      );
+    });
+  };
 
   const deleteStoreMutation = useMutation({
     mutationFn: async (storeId) => {
@@ -430,6 +494,118 @@ export default function StorePage() {
   const handleDeleteClose = () => {
     setDeleteOpen(false);
     setSelectedStore(null);
+  };
+
+  const handleReplaceImage = (
+    imageIndex,
+    file
+  ) => {
+    if (!file) return;
+
+    const previewUrl =
+      URL.createObjectURL(file);
+
+    setImagePreviews((currentImages) =>
+      currentImages.map((image, index) => {
+        if (index !== imageIndex) {
+          return image;
+        }
+
+        if (
+          image.isObjectUrl &&
+          image.url
+        ) {
+          URL.revokeObjectURL(image.url);
+        }
+
+        return {
+          ...image,
+          url: previewUrl,
+          file,
+          name: file.name,
+          isObjectUrl: true
+        };
+      })
+    );
+  };
+
+  const handleImageTitleChange = (
+    imageIndex,
+    title
+  ) => {
+    setImagePreviews((currentImages) =>
+      currentImages.map((image, index) =>
+        index === imageIndex
+          ? {
+            ...image,
+            title
+          }
+          : image
+      )
+    );
+  };
+
+  const updateExistingStoreImage = async (
+    image
+  ) => {
+    const payload = new FormData();
+
+    if (image.file instanceof File) {
+      payload.append('image', image.file);
+    }
+
+    payload.append(
+      'image_title',
+      String(image.title || '').trim()
+    );
+
+    const response = await api.patch(
+      `/api/inventory/store-image/${image.id}`,
+      payload,
+      {
+        timeout: 60000
+      }
+    );
+
+    return response.data;
+  };
+
+  const getChangedExistingImages = () =>
+    imagePreviews.filter((image) => {
+      if (!image.id) return false;
+
+      const titleChanged =
+        String(image.title || '').trim() !==
+        String(image.originalTitle || '').trim();
+
+      return (
+        image.file instanceof File ||
+        titleChanged
+      );
+    });
+
+  const handleRemoveImage = async (
+    image,
+    imageIndex
+  ) => {
+    if (!image.id) {
+      removeLocalImage(imageIndex);
+      return;
+    }
+
+    try {
+      await deleteStoreImageMutation.mutateAsync(
+        image.id
+      );
+
+      removeLocalImage(imageIndex);
+    } catch (error) {
+      console.error('Delete image error:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data
+      });
+    }
   };
 
   return (
@@ -501,9 +677,6 @@ export default function StorePage() {
               city: selectedStore?.city || '',
               area: selectedStore?.area || '',
               is_active: selectedStore?.is_active ?? true,
-              images: selectedStoreImages.map(() => null),
-              image_ids: selectedStoreImages.map((image) => image.id),
-              image_titles: selectedStoreImages.map((image) => image.title)
             }}
             enableReinitialize
             validationSchema={storeSchema}
@@ -717,35 +890,22 @@ export default function StorePage() {
 
                           if (files.length === 0) return;
 
-                          const newPreviews = files.map((file) => ({
+                          const newImages = files.map((file) => ({
                             id: null,
                             url: URL.createObjectURL(file),
+                            file,
                             title: '',
+                            originalTitle: '',
                             name: file.name,
-                            isObjectUrl: true
+                            isObjectUrl: true,
+                            isNew: true
                           }));
 
-                          setImagePreviews((currentPreviews) => [
-                            ...currentPreviews,
-                            ...newPreviews
+                          setImagePreviews((currentImages) => [
+                            ...currentImages,
+                            ...newImages
                           ]);
 
-                          setFieldValue('images', [
-                            ...values.images,
-                            ...files
-                          ]);
-
-                          setFieldValue('image_ids', [
-                            ...values.image_ids,
-                            ...files.map(() => null)
-                          ]);
-
-                          setFieldValue('image_titles', [
-                            ...values.image_titles,
-                            ...files.map(() => '')
-                          ]);
-
-                          setFieldTouched('images', true, false);
                           event.currentTarget.value = '';
                         }}
                       />
@@ -771,12 +931,44 @@ export default function StorePage() {
                             <Paper
                               key={`${image.url}-${index}`}
                               variant="outlined"
-                              sx={{ p: 1 }}
+                              sx={{ p: 1, position: 'relative' }}
                             >
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  handleRemoveImage(image, index)
+                                }
+                                disabled={
+                                  deleteStoreImageMutation.isPending &&
+                                  deleteStoreImageMutation.variables ===
+                                  image.id
+                                }
+                                sx={{
+                                  position: 'absolute',
+                                  top: 6,
+                                  right: 6,
+                                  zIndex: 1,
+                                  backgroundColor: 'background.paper',
+                                  boxShadow: 1,
+                                  '&:hover': {
+                                    backgroundColor: 'error.lighter'
+                                  }
+                                }}
+                              >
+                                {deleteStoreImageMutation.isPending &&
+                                  deleteStoreImageMutation.variables ===
+                                  image.id ? (
+                                  <CircularProgress size={17} />
+                                ) : (
+                                  <DeleteOutlineOutlinedIcon
+                                    fontSize="small"
+                                  />
+                                )}
+                              </IconButton>
                               <Box
                                 component="img"
                                 src={image.url}
-                                alt={values.image_titles[index] || `Store image ${index + 1}`}
                                 sx={{
                                   width: '100%',
                                   height: 100,
@@ -803,54 +995,7 @@ export default function StorePage() {
                                     const file =
                                       event.currentTarget.files?.[0];
 
-                                    if (!file) return;
-
-                                    const previewUrl =
-                                      URL.createObjectURL(file);
-
-                                    setImagePreviews((currentPreviews) => {
-                                      const updatedPreviews = [
-                                        ...currentPreviews
-                                      ];
-
-                                      const currentImage =
-                                        updatedPreviews[index];
-
-                                      if (
-                                        currentImage?.isObjectUrl &&
-                                        currentImage?.url
-                                      ) {
-                                        URL.revokeObjectURL(
-                                          currentImage.url
-                                        );
-                                      }
-
-                                      updatedPreviews[index] = {
-                                        ...currentImage,
-                                        url: previewUrl,
-                                        name: file.name,
-                                        isObjectUrl: true
-                                      };
-
-                                      return updatedPreviews;
-                                    });
-
-                                    const updatedImages = [
-                                      ...values.images
-                                    ];
-
-                                    updatedImages[index] = file;
-
-                                    setFieldValue(
-                                      'images',
-                                      updatedImages
-                                    );
-
-                                    setFieldTouched(
-                                      `images.${index}`,
-                                      true,
-                                      false
-                                    );
+                                    handleReplaceImage(index, file);
 
                                     event.currentTarget.value = '';
                                   }}
@@ -859,13 +1004,14 @@ export default function StorePage() {
                               <TextField
                                 fullWidth
                                 size="small"
-                                name={`image_titles.${index}`}
                                 label={`Image ${index + 1} Title`}
-                                value={values.image_titles[index] || ''}
-                                onChange={handleChange}
-                                onBlur={handleBlur}
-                                error={Boolean(titleTouched && titleError)}
-                                helperText={titleTouched && titleError ? titleError : ''}
+                                value={image.title}
+                                onChange={(event) =>
+                                  handleImageTitleChange(
+                                    index,
+                                    event.target.value
+                                  )
+                                }
                               />
                             </Paper>
                           );
