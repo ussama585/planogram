@@ -3,8 +3,10 @@ import userDashboard from './user-menu-items';
 
 // ==============================|| MENU ITEMS ||============================== //
 
-const menuItems = {
+export const adminMenu = {
   items: [dashboard]
 };
 
-export default menuItems;
+export const userMenu = {
+  items: [userDashboard]
+};

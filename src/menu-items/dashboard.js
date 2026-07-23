@@ -6,6 +6,9 @@ const icons = { IconDashboard };
 
 // ==============================|| DASHBOARD MENU ITEMS ||============================== //
 
+const authState = JSON.parse(localStorage.getItem('auth-state') || '{}');
+const userType = authState?.state?.userType || '';
+
 const dashboard = {
   id: 'dashboard',
   // title: 'Dashboard',

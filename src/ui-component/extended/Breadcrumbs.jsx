@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 // material-ui
@@ -12,13 +12,14 @@ import MuiBreadcrumbs from '@mui/material/Breadcrumbs';
 import Box from '@mui/material/Box';
 
 // project imports
-import navigation from 'menu-items';
+import { adminMenu, userMenu } from 'menu-items';
 
 // assets
 import { IconChevronRight, IconTallymark1 } from '@tabler/icons-react';
 import AccountTreeTwoToneIcon from '@mui/icons-material/AccountTreeTwoTone';
 import HomeIcon from '@mui/icons-material/Home';
 import HomeTwoToneIcon from '@mui/icons-material/HomeTwoTone';
+import useAppStore from 'store/appStore';
 
 // ==============================|| BREADCRUMBS TITLE ||============================== //
 
@@ -50,6 +51,15 @@ export default function Breadcrumbs({
 }) {
   const theme = useTheme();
   const location = useLocation();
+
+  const userType = useAppStore((state) => state.userType);
+
+  const navigation = useMemo(() => {
+    return String(userType || '').toLowerCase() === 'admin'
+      ? adminMenu
+      : userMenu;
+  }, [userType]);
+
   const [main, setMain] = useState();
   const [item, setItem] = useState();
 
@@ -71,40 +81,49 @@ export default function Breadcrumbs({
 
   let customLocation = location.pathname;
 
-  useEffect(() => {
-    navigation?.items?.map((menu) => {
-      if (menu.type && menu.type === 'group') {
-        if (menu?.url && menu.url === customLocation) {
-          setMain(menu);
-          setItem(menu);
-        } else {
-          getCollapse(menu);
-        }
-      }
-      return false;
-    });
-  });
+  const getCollapse = useCallback(
+    (menu) => {
+      if (custom || !menu?.children) return;
 
-  // set active item state
-  const getCollapse = (menu) => {
-    if (!custom && menu.children) {
-      menu.children.filter((collapse) => {
-        if (collapse.type && collapse.type === 'collapse') {
-          getCollapse(collapse);
+      menu.children.forEach((collapse) => {
+        if (collapse.type === 'collapse') {
           if (collapse.url === customLocation) {
             setMain(collapse);
             setItem(collapse);
+            return;
           }
-        } else if (collapse.type && collapse.type === 'item') {
-          if (customLocation === collapse.url) {
-            setMain(menu);
-            setItem(collapse);
-          }
+
+          getCollapse(collapse);
         }
-        return false;
+
+        if (
+          collapse.type === 'item' &&
+          collapse.url === customLocation
+        ) {
+          setMain(menu);
+          setItem(collapse);
+        }
       });
-    }
-  };
+    },
+    [custom, customLocation]
+  );
+
+  useEffect(() => {
+    setMain(undefined);
+    setItem(undefined);
+
+    navigation?.items?.forEach((menu) => {
+      if (menu.type !== 'group') return;
+
+      if (menu.url && menu.url === customLocation) {
+        setMain(menu);
+        setItem(menu);
+        return;
+      }
+
+      getCollapse(menu);
+    });
+  }, [navigation, customLocation, getCollapse]);
 
   // item separator
   const SeparatorIcon = separator;

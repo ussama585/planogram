@@ -67,7 +67,7 @@ export default function AuthLogin() {
 
   return (
     <Formik
-      initialValues={{ email: 'abc@gmail.com', password: '123456' }}
+      initialValues={{ email: '', password: '' }}
       validationSchema={loginSchema}
       onSubmit={(values) => {
         loginMutation.mutate({

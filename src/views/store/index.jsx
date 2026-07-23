@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Formik } from 'formik';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -16,12 +16,6 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 
@@ -31,6 +25,7 @@ import storeSchema from './storeSchema';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import ServerTable from 'ui-component/tables/server-side-custom-table';
 
 const normalizeImageTitles = (imageTitles) => {
   if (Array.isArray(imageTitles)) {
@@ -130,12 +125,40 @@ const buildStoreFormData = (values, storeId) => {
 };
 
 export default function StorePage() {
+  const api = useAxios();
+  const queryClient = useQueryClient();
+
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
   const [imagePreviews, setImagePreviews] = useState([]);
-  const api = useAxios();
-  const queryClient = useQueryClient();
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [search, setSearch] = useState('');
+
+  const handleTableSearchChange = useCallback((value) => {
+    const normalizedValue = String(value || '').trim();
+
+    setSearch((previousSearch) => {
+      if (previousSearch === normalizedValue) {
+        return previousSearch;
+      }
+
+      return normalizedValue;
+    });
+
+    setPage(0);
+  }, []);
+
+  const handleTablePageChange = useCallback((newPage) => {
+    setPage(newPage);
+  }, []);
+
+  const handleTableRowsPerPageChange = useCallback((newRowsPerPage) => {
+    setRowsPerPage(newRowsPerPage);
+    setPage(0);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -147,12 +170,26 @@ export default function StorePage() {
     };
   }, [imagePreviews]);
 
-  const { data: storeData, isLoading, isError, error } = useQuery({
-    queryKey: ['store-list'],
+  const {
+    data: storeData,
+    isLoading,
+    isError,
+    error,
+    isFetching
+  } = useQuery({
+    queryKey: ['store-list', page, rowsPerPage, search],
     queryFn: async () => {
-      const response = await api.get('/api/inventory/store-list');
+      const response = await api.get('/api/inventory/store-list', {
+        params: {
+          page: page + 1,
+          size: rowsPerPage,
+          ...(search && { search })
+        }
+      });
+
       return response.data;
-    }
+    },
+    placeholderData: (previousData) => previousData
   });
 
   const {
@@ -172,9 +209,77 @@ export default function StorePage() {
   }, [regionOptionsData]);
 
   const stores = useMemo(() => {
-    if (Array.isArray(storeData?.results)) return storeData.results;
-    return [];
+    return Array.isArray(storeData?.results)
+      ? storeData.results
+      : [];
   }, [storeData]);
+
+  const totalStores = Number(storeData?.count || 0);
+
+  const storeColumns = useMemo(
+    () => [
+      {
+        id: 'name',
+        label: 'Name',
+        render: (store, index) =>
+          store?.name ||
+          `Store ${page * rowsPerPage + index + 1}`
+      },
+      {
+        id: 'store_code',
+        label: 'Store Code',
+        render: (store) => store?.store_code || '-'
+      },
+      {
+        id: 'branch_code',
+        label: 'Branch Code',
+        render: (store) => store?.branch_code || '-'
+      },
+      {
+        id: 'region',
+        label: 'Region',
+        render: (store) =>
+          store?.region_name ||
+          store?.region ||
+          '-'
+      },
+      {
+        id: 'city',
+        label: 'City',
+        render: (store) => store?.city || '-'
+      },
+      {
+        id: 'area',
+        label: 'Area',
+        render: (store) => store?.area || '-'
+      },
+      {
+        id: 'actions',
+        label: 'Actions',
+        align: 'right',
+        render: (store) => (
+          <>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleOpenEdit(store)}
+            >
+              <EditOutlinedIcon fontSize="small" />
+            </IconButton>
+
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDelete(store)}
+            >
+              <DeleteOutlineOutlinedIcon fontSize="small" />
+            </IconButton>
+          </>
+        )
+      }
+    ],
+    [page, rowsPerPage]
+  );
 
   const selectedStoreImages = useMemo(
     () => normalizeStoreImages(selectedStore),
@@ -301,78 +406,24 @@ export default function StorePage() {
           <Typography variant="body2" color="text.secondary">
             Manage your stores and their regional coverage.
           </Typography>
-          <TableContainer component={Paper} variant="outlined">
-            {isLoading ? (
-              <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <CircularProgress />
-              </Stack>
-            ) : isError ? (
-              <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <Typography color="error">
-                  Failed to load stores: {error?.message || 'Unknown error'}
-                </Typography>
-              </Stack>
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Store Code</TableCell>
-                    <TableCell>Branch Code</TableCell>
-                    <TableCell>Region</TableCell>
-                    <TableCell>City</TableCell>
-                    <TableCell>Area</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {stores.length > 0 ? (
-                    stores.map((store, index) => {
-                      const name = store?.name || `Store ${index + 1}`;
-                      const storeCode = store?.store_code || '-';
-                      const branchCode = store?.branch_code || '-';
-                      const regionName = store?.region_name || store?.region || '-';
-                      const city = store?.city || '-';
-                      const area = store?.area || '-';
-
-                      return (
-                        <TableRow key={store?.id || `${name}-${index}`} hover>
-                          <TableCell>{name}</TableCell>
-                          <TableCell>{storeCode}</TableCell>
-                          <TableCell>{branchCode}</TableCell>
-                          <TableCell>{regionName}</TableCell>
-                          <TableCell>{city}</TableCell>
-                          <TableCell>{area}</TableCell>
-                          <TableCell align="right">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleOpenEdit(store)}
-                            >
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDelete(store)}
-                            >
-                              <DeleteOutlineOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center">
-                        No stores found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </TableContainer>
+          <ServerTable
+            columns={storeColumns}
+            rows={stores}
+            getRowId={(store) => store.id}
+            loading={isLoading}
+            fetching={isFetching}
+            error={isError ? error : null}
+            emptyMessage="No stores found."
+            searchValue={search}
+            searchPlaceholder="Search stores..."
+            onSearchChange={handleTableSearchChange}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            totalCount={totalStores}
+            onPageChange={handleTablePageChange}
+            onRowsPerPageChange={handleTableRowsPerPageChange}
+          />
         </Stack>
       </MainCard>
 
