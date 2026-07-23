@@ -114,6 +114,20 @@ const normalizeDisplayOverviewResponse = (responseData) => {
         ? store.products
         : [];
 
+      const storeImages = Array.isArray(store?.images)
+        ? store.images
+          .filter((item) => item?.image)
+          .map((item, imageIndex) => ({
+            id:
+              item?.id ??
+              `${store?.id ?? storeIndex}-image-${imageIndex}`,
+            title: String(
+              item?.title ?? `Image ${imageIndex + 1}`
+            ).trim(),
+            image: String(item?.image ?? "").trim()
+          }))
+        : [];
+
       return products.map((product, productIndex) => {
         const tableType = String(
           product?.table_type ?? ""
@@ -148,6 +162,7 @@ const normalizeDisplayOverviewResponse = (responseData) => {
           storeCode,
           storeName,
           storeKey: `${branch}__${storeCode}__${storeName}`,
+          storeImages,
           tableType,
           tableNumber,
           quantity: quantityValue ?? 0,

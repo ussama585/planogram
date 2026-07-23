@@ -1,11 +1,19 @@
-import { useMemo, useState } from 'react';
-import { Formik } from 'formik';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
 
-// material-ui
-import { IconButton } from '@mui/material';
+import { Formik } from 'formik';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient
+} from '@tanstack/react-query';
+
+import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -14,47 +22,140 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
 
-// project imports
-import MainCard from 'ui-component/cards/MainCard';
-import useAxios from '../../api/useAxios';
-import brandSchema from './brandSchema';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 
+import MainCard from 'ui-component/cards/MainCard';
+import ServerTable from 'ui-component/tables/server-side-custom-table';
+
+import useAxios from '../../api/useAxios';
+import brandSchema from './brandSchema';
+
 export default function BrandsPage() {
-  const [open, setOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState(null);
   const api = useAxios();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['brand-list'],
+  const [open, setOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState(null);
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [search, setSearch] = useState('');
+
+  const handleOpenCreate = useCallback(() => {
+    setSelectedBrand(null);
+    setOpen(true);
+  }, []);
+
+  const handleOpenEdit = useCallback((brand) => {
+    setSelectedBrand(brand);
+    setOpen(true);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setSelectedBrand(null);
+  }, []);
+
+  const handleDelete = useCallback((brand) => {
+    setSelectedBrand(brand);
+    setDeleteOpen(true);
+  }, []);
+
+  const handleDeleteClose = useCallback(() => {
+    setDeleteOpen(false);
+    setSelectedBrand(null);
+  }, []);
+
+  const handleTableSearchChange = useCallback((value) => {
+    const normalizedValue = String(value || '').trim();
+
+    setSearch((previousSearch) => {
+      if (previousSearch === normalizedValue) {
+        return previousSearch;
+      }
+
+      setPage(0);
+      return normalizedValue;
+    });
+  }, []);
+
+  const handleTablePageChange = useCallback((newPage) => {
+    setPage(newPage);
+  }, []);
+
+  const handleRowsPerPageChange = useCallback((newRowsPerPage) => {
+    setRowsPerPage(newRowsPerPage);
+    setPage(0);
+  }, []);
+
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+    error
+  } = useQuery({
+    queryKey: [
+      'brand-list',
+      page,
+      rowsPerPage,
+      search
+    ],
     queryFn: async () => {
-      const response = await api.get(`/api/inventory/brand-list`);
+      const response = await api.get(
+        '/api/inventory/brand-list',
+        {
+          params: {
+            page: page + 1,
+            page_size: rowsPerPage,
+            ...(search && { search })
+          }
+        }
+      );
+
       return response.data;
-    }
+    },
+    placeholderData: (previousData) => previousData
   });
+
+  const brands = useMemo(() => {
+    return Array.isArray(data?.results)
+      ? data.results
+      : [];
+  }, [data]);
+
+  const totalBrands = Number(data?.count || 0);
+
+  useEffect(() => {
+    const totalPages = Number(data?.total_pages || 0);
+
+    if (totalPages > 0 && page + 1 > totalPages) {
+      setPage(Math.max(totalPages - 1, 0));
+    }
+  }, [data?.total_pages, page]);
 
   const createBrandMutation = useMutation({
     mutationFn: async (values) => {
       const payload = {
-        name: values.name,
+        name: values.name
       };
-      const response = await api.post(`/api/inventory/brand-create`, payload);
+
+      const response = await api.post(
+        '/api/inventory/brand-create',
+        payload
+      );
+
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-list'] });
+      queryClient.invalidateQueries({
+        queryKey: ['brand-list']
+      });
+
       setOpen(false);
       setSelectedBrand(null);
     }
@@ -64,13 +165,21 @@ export default function BrandsPage() {
     mutationFn: async (values) => {
       const payload = {
         id: selectedBrand?.id,
-        name: values.name,
+        name: values.name
       };
-      const response = await api.patch(`/api/inventory/brand-detail/${selectedBrand?.id}`, payload);
+
+      const response = await api.patch(
+        `/api/inventory/brand-detail/${selectedBrand?.id}`,
+        payload
+      );
+
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-list'] });
+      queryClient.invalidateQueries({
+        queryKey: ['brand-list']
+      });
+
       setOpen(false);
       setSelectedBrand(null);
     }
@@ -78,153 +187,207 @@ export default function BrandsPage() {
 
   const deleteBrandMutation = useMutation({
     mutationFn: async (brandId) => {
-      const response = await api.delete(`/api/inventory/brand-detail/${brandId}`);
+      const response = await api.delete(
+        `/api/inventory/brand-detail/${brandId}`
+      );
+
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['brand-list'] });
+      queryClient.invalidateQueries({
+        queryKey: ['brand-list']
+      });
+
+      setDeleteOpen(false);
+      setSelectedBrand(null);
     }
   });
 
-  const brands = useMemo(() => {
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.results)) return data.results;
-    if (Array.isArray(data?.data)) return data.data;
-    return [];
-  }, [data]);
-
-  const handleOpenCreate = () => {
-    setSelectedBrand(null);
-    setOpen(true);
-  };
-
-  const handleOpenEdit = (brand) => {
-    setSelectedBrand(brand);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setSelectedBrand(null);
-  };
-
-  const handleDelete = (brand) => {
-    setSelectedBrand(brand);
-    setDeleteOpen(true);
-  };
-
   const handleDeleteConfirm = () => {
-    if (selectedBrand?.id) {
-      deleteBrandMutation.mutate(selectedBrand.id, {
-        onSuccess: () => {
-          setDeleteOpen(false);
-          setSelectedBrand(null);
-        }
-      });
-    }
+    if (!selectedBrand?.id) return;
+
+    deleteBrandMutation.mutate(selectedBrand.id);
   };
 
-  const handleDeleteClose = () => {
-    setDeleteOpen(false);
-    setSelectedBrand(null);
-  };
+  const brandColumns = useMemo(
+    () => [
+      {
+        id: 'name',
+        label: 'Name',
+        render: (brand) => brand?.name || '-'
+      },
+      {
+        id: 'actions',
+        label: 'Actions',
+        align: 'right',
+        render: (brand) => (
+          <>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleOpenEdit(brand)}
+            >
+              <EditOutlinedIcon fontSize="small" />
+            </IconButton>
+
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDelete(brand)}
+            >
+              <DeleteOutlineOutlinedIcon fontSize="small" />
+            </IconButton>
+          </>
+        )
+      }
+    ],
+    [handleOpenEdit, handleDelete]
+  );
+
+  const isSaving =
+    createBrandMutation.isPending ||
+    updateBrandMutation.isPending;
 
   return (
     <>
-      <MainCard title="Brands" secondary={<Button variant="contained" onClick={handleOpenCreate}>Add Brand</Button>}>
+      <MainCard
+        title="Brands"
+        secondary={
+          <Button
+            variant="contained"
+            onClick={handleOpenCreate}
+          >
+            Add Brand
+          </Button>
+        }
+      >
         <Stack spacing={2}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
             Manage your brands and their catalog details.
           </Typography>
-          <TableContainer component={Paper} variant="outlined">
-            {isLoading ? (
-              <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <CircularProgress />
-              </Stack>
-            ) : isError ? (
-              <Stack alignItems="center" justifyContent="center" sx={{ py: 6 }}>
-                <Typography color="error">Failed to load brands: {error?.message || 'Unknown error'}</Typography>
-              </Stack>
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {brands.length > 0 ? (
-                    brands.map((brand, index) => {
-                      const name = brand?.name;
 
-                      return (
-                        <TableRow key={brand?.id || `${name}-${index}`} hover>
-                          <TableCell>{name}</TableCell>
-                          <TableCell align="right">
-                            <IconButton size="small" color="primary" onClick={() => handleOpenEdit(brand)}>
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDelete(brand)}>
-                              <DeleteOutlineOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center">
-                        No brands found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </TableContainer>
+          <ServerTable
+            columns={brandColumns}
+            rows={brands}
+            getRowId={(brand) => brand.id}
+            loading={isLoading}
+            fetching={isFetching}
+            error={isError ? error : null}
+            emptyMessage="No brands found."
+            searchValue={search}
+            searchPlaceholder="Search brands..."
+            onSearchChange={handleTableSearchChange}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            totalCount={totalBrands}
+            onPageChange={handleTablePageChange}
+            onRowsPerPageChange={handleRowsPerPageChange}
+          />
         </Stack>
       </MainCard>
 
-      <Dialog open={deleteOpen} onClose={handleDeleteClose} maxWidth="sm" fullWidth>
+      <Dialog
+        open={deleteOpen}
+        onClose={handleDeleteClose}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Delete Brand</DialogTitle>
+
         <DialogContent>
           <Typography>
-            Are you sure you want to delete <strong>{selectedBrand?.name || 'this brand'}</strong>?
+            Are you sure you want to delete{' '}
+            <strong>
+              {selectedBrand?.name || 'this brand'}
+            </strong>
+            ?
           </Typography>
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleDeleteClose}>No</Button>
-          <Button variant="contained" color="error" onClick={handleDeleteConfirm} disabled={deleteBrandMutation.isPending}>
-            {deleteBrandMutation.isPending ? 'Deleting...' : 'Yes'}
+          <Button onClick={handleDeleteClose}>
+            No
+          </Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeleteConfirm}
+            disabled={deleteBrandMutation.isPending}
+          >
+            {deleteBrandMutation.isPending
+              ? 'Deleting...'
+              : 'Yes'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>{selectedBrand ? 'Edit Brand' : 'Add Brand'}</DialogTitle>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {selectedBrand
+            ? 'Edit Brand'
+            : 'Add Brand'}
+        </DialogTitle>
+
         <DialogContent>
           <Formik
-            initialValues={{ name: selectedBrand?.name || '', description: selectedBrand?.description || '' }}
+            initialValues={{
+              name: selectedBrand?.name || ''
+            }}
             enableReinitialize
             validationSchema={brandSchema}
             onSubmit={(values, { resetForm }) => {
+              const mutationOptions = {
+                onSuccess: () => resetForm()
+              };
+
               if (selectedBrand?.id) {
-                updateBrandMutation.mutate(values, {
-                  onSuccess: () => resetForm()
-                });
-              } else {
-                createBrandMutation.mutate(values, {
-                  onSuccess: () => resetForm()
-                });
+                updateBrandMutation.mutate(
+                  values,
+                  mutationOptions
+                );
+
+                return;
               }
+
+              createBrandMutation.mutate(
+                values,
+                mutationOptions
+              );
             }}
           >
-            {({ values, errors, touched, handleChange, handleBlur, handleSubmit }) => (
-              <form onSubmit={handleSubmit}>
+            {({
+              values,
+              errors,
+              touched,
+              handleChange,
+              handleBlur,
+              handleSubmit
+            }) => (
+              <form
+                id="brand-form"
+                onSubmit={handleSubmit}
+              >
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                  <FormControl fullWidth error={Boolean(touched.name && errors.name)}>
-                    <InputLabel htmlFor="brand-name">Name</InputLabel>
+                  <FormControl
+                    fullWidth
+                    error={Boolean(
+                      touched.name && errors.name
+                    )}
+                  >
+                    <InputLabel htmlFor="brand-name">
+                      Name
+                    </InputLabel>
+
                     <OutlinedInput
                       id="brand-name"
                       name="name"
@@ -233,8 +396,13 @@ export default function BrandsPage() {
                       onChange={handleChange}
                       onBlur={handleBlur}
                     />
+
                     {touched.name && errors.name && (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                      <Typography
+                        variant="caption"
+                        color="error"
+                        sx={{ mt: 0.5 }}
+                      >
                         {errors.name}
                       </Typography>
                     )}
@@ -244,17 +412,23 @@ export default function BrandsPage() {
             )}
           </Formik>
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={handleClose}>
+            Cancel
+          </Button>
+
           <Button
             variant="contained"
-            onClick={() => {
-              const form = document.querySelector('form');
-              if (form) form.requestSubmit();
-            }}
-            disabled={createBrandMutation.isPending || updateBrandMutation.isPending}
+            type="submit"
+            form="brand-form"
+            disabled={isSaving}
           >
-            {createBrandMutation.isPending || updateBrandMutation.isPending ? 'Saving...' : selectedBrand ? 'Update Brand' : 'Save Brand'}
+            {isSaving
+              ? 'Saving...'
+              : selectedBrand
+                ? 'Update Brand'
+                : 'Save Brand'}
           </Button>
         </DialogActions>
       </Dialog>

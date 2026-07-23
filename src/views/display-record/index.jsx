@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,43 +22,18 @@ import {
   IconButton,
   InputLabel,
   OutlinedInput,
-  Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Typography
 } from '@mui/material';
 
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import ServerTable from 'ui-component/tables/server-side-custom-table';
 
 import MainCard from 'ui-component/cards/MainCard';
 import useAxios from '../../api/useAxios';
-
-const recordSchema = Yup.object({
-  region: Yup.string().required('Region is required'),
-  store: Yup.string().required('Store is required'),
-  table_type: Yup.string().required('Table type is required'),
-  product: Yup.string().required('Product is required'),
-  security_type: Yup.string().required('Security type is required'),
-  table_number: Yup.number()
-    .typeError('Table number must be a number')
-    .integer('Table number must be an integer')
-    .min(1, 'Table number must be at least 1')
-    .required('Table number is required'),
-  quantity: Yup.number()
-    .typeError('Quantity must be a number')
-    .integer('Quantity must be an integer')
-    .min(1, 'Quantity must be at least 1')
-    .required('Quantity is required'),
-  keyboard: Yup.string().nullable(),
-  pen: Yup.string().nullable()
-});
+import recordSchema from './recordSchema';
 
 const getListFromResponse = (responseData) => {
   if (Array.isArray(responseData)) {
@@ -858,10 +839,61 @@ export default function DisplayRecordsPage() {
   const queryClient = useQueryClient();
   const formikRef = useRef(null);
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [search, setSearch] = useState('');
+
   const [open, setOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+
+  const handleOpenCreate = useCallback(() => {
+    setSelectedRecord(null);
+    setOpen(true);
+  }, []);
+
+  const handleOpenEdit = useCallback((record) => {
+    setSelectedRecord(record);
+    setOpen(true);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setSelectedRecord(null);
+  }, []);
+
+  const handleDelete = useCallback((record) => {
+    setSelectedRecord(record);
+    setDeleteOpen(true);
+  }, []);
+
+  const handleDeleteClose = useCallback(() => {
+    setDeleteOpen(false);
+    setSelectedRecord(null);
+  }, []);
+
+  const handleTableSearchChange = useCallback(
+    (value) => {
+      const normalizedValue = String(value || '').trim();
+
+      if (normalizedValue === search) {
+        return;
+      }
+
+      setPage(0);
+      setSearch(normalizedValue);
+    },
+    [search]
+  );
+
+  const handleTablePageChange = useCallback((newPage) => {
+    setPage(newPage);
+  }, []);
+
+  const handleRowsPerPageChange = useCallback((newRowsPerPage) => {
+    setPage(0);
+    setRowsPerPage(newRowsPerPage);
+  }, []);
 
   const {
     data: recordData,
@@ -870,13 +902,20 @@ export default function DisplayRecordsPage() {
     isError,
     error
   } = useQuery({
-    queryKey: ['display-record-list', page],
+    queryKey: [
+      'display-record-list',
+      page,
+      rowsPerPage,
+      search
+    ],
     queryFn: async () => {
       const response = await api.get(
         '/api/inventory/record-list',
         {
           params: {
-            page
+            page: page + 1,
+            page_size: rowsPerPage,
+            ...(search && { search })
           }
         }
       );
@@ -909,6 +948,16 @@ export default function DisplayRecordsPage() {
     () => getListFromResponse(regionOptionsData),
     [regionOptionsData]
   );
+
+  const totalRecords = Number(recordData?.count || 0);
+
+  useEffect(() => {
+    const totalPages = Number(recordData?.total_pages || 0);
+
+    if (totalPages > 0 && page >= totalPages) {
+      setPage(Math.max(totalPages - 1, 0));
+    }
+  }, [recordData?.total_pages, page]);
 
   const initialValues = useMemo(
     () => ({
@@ -1026,35 +1075,12 @@ export default function DisplayRecordsPage() {
     }
   });
 
-  const handleOpenCreate = () => {
-    setSelectedRecord(null);
-    setOpen(true);
-  };
-
-  const handleOpenEdit = (record) => {
-    setSelectedRecord(record);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setSelectedRecord(null);
-  };
-
-  const handleDelete = (record) => {
-    setSelectedRecord(record);
-    setDeleteOpen(true);
-  };
-
-  const handleDeleteClose = () => {
-    setDeleteOpen(false);
-    setSelectedRecord(null);
-  };
-
   const handleDeleteConfirm = () => {
-    if (selectedRecord?.id) {
-      deleteRecordMutation.mutate(selectedRecord.id);
+    if (!selectedRecord?.id) {
+      return;
     }
+
+    deleteRecordMutation.mutate(selectedRecord.id);
   };
 
   const handleSubmit = (values) => {
@@ -1066,6 +1092,148 @@ export default function DisplayRecordsPage() {
     createRecordMutation.mutate(values);
   };
 
+  const recordColumns = useMemo(
+    () => [
+      {
+        id: 'store_name',
+        label: 'Store',
+        render: (record) => record?.store_name || '-',
+        cellSx: {
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'table_type_name',
+        label: 'Table Type',
+        render: (record) =>
+          record?.table_type_name || '-',
+        cellSx: {
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'product_name',
+        label: 'Product',
+        cellSx: {
+          minWidth: 260,
+          maxWidth: 360
+        },
+        render: (record) => (
+          <Typography
+            variant="body2"
+            title={record?.product_name || ''}
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {record?.product_name || '-'}
+          </Typography>
+        )
+      },
+      {
+        id: 'product_sku',
+        label: 'Product SKU',
+        render: (record) =>
+          record?.product_sku || '-',
+        cellSx: {
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'branch_code',
+        label: 'Branch Code',
+        render: (record) =>
+          record?.branch_code || '-',
+        cellSx: {
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'store_code',
+        label: 'Store Code',
+        render: (record) =>
+          record?.store_code || '-',
+        cellSx: {
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'security_type_name',
+        label: 'Security Type',
+        render: (record) =>
+          record?.security_type_name || '-',
+        cellSx: {
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'table_number',
+        label: 'Table #',
+        render: (record) =>
+          record?.table_number ?? '-'
+      },
+      {
+        id: 'quantity',
+        label: 'Quantity',
+        render: (record) =>
+          record?.quantity ?? '-'
+      },
+      {
+        id: 'keyboard',
+        label: 'Keyboard',
+        render: (record) =>
+          record?.keyboard || '-'
+      },
+      {
+        id: 'pen',
+        label: 'Pen',
+        render: (record) =>
+          record?.pen || '-'
+      },
+      {
+        id: 'created_at',
+        label: 'Created At',
+        render: (record) =>
+          formatDate(record?.created_at),
+        cellSx: {
+          minWidth: 180,
+          whiteSpace: 'nowrap'
+        }
+      },
+      {
+        id: 'actions',
+        label: 'Actions',
+        align: 'right',
+        cellSx: {
+          minWidth: 100,
+          whiteSpace: 'nowrap'
+        },
+        render: (record) => (
+          <>
+            <IconButton
+              size="small"
+              color="primary"
+              onClick={() => handleOpenEdit(record)}
+            >
+              <EditOutlinedIcon fontSize="small" />
+            </IconButton>
+
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDelete(record)}
+            >
+              <DeleteOutlineOutlinedIcon fontSize="small" />
+            </IconButton>
+          </>
+        )
+      }
+    ],
+    [handleOpenEdit, handleDelete]
+  );
+
   const isSaving =
     createRecordMutation.isPending ||
     updateRecordMutation.isPending;
@@ -1073,14 +1241,6 @@ export default function DisplayRecordsPage() {
   const saveError =
     createRecordMutation.error ||
     updateRecordMutation.error;
-
-  const totalRecords = Number(recordData?.count) || 0;
-  const currentPage =
-    Number(recordData?.current_page) || page;
-  const totalPages =
-    Number(recordData?.total_pages) || 1;
-  const hasPreviousPage = Boolean(recordData?.previous);
-  const hasNextPage = Boolean(recordData?.next);
 
   return (
     <>
@@ -1097,211 +1257,40 @@ export default function DisplayRecordsPage() {
         }
       >
         <Stack spacing={2}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
             Manage products assigned to regions, stores, tables and
             security types.
           </Typography>
 
-          <TableContainer component={Paper} variant="outlined">
-            {isLoading ? (
-              <Stack
-                alignItems="center"
-                justifyContent="center"
-                sx={{ py: 6 }}
-              >
-                <CircularProgress />
-              </Stack>
-            ) : isError ? (
-              <Stack
-                alignItems="center"
-                justifyContent="center"
-                sx={{ py: 6 }}
-              >
-                <Typography color="error">
-                  Failed to load display records:{' '}
-                  {getErrorMessage(error)}
-                </Typography>
-              </Stack>
-            ) : (
-              <Table
-                size="small"
-                sx={{
-                  minWidth: 1750
-                }}
-              >
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Store</TableCell>
-                    <TableCell>Table Type</TableCell>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Product SKU</TableCell>
-                    <TableCell>Branch Code</TableCell>
-                    <TableCell>Store Code</TableCell>
-                    <TableCell>Security Type</TableCell>
-                    <TableCell>Table #</TableCell>
-                    <TableCell>Quantity</TableCell>
-                    <TableCell>Keyboard</TableCell>
-                    <TableCell>Pen</TableCell>
-                    <TableCell>Created At</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  {records.length > 0 ? (
-                    records.map((record, index) => (
-                      <TableRow
-                        key={
-                          record?.id ||
-                          `display-record-${index}`
-                        }
-                        hover
-                      >
-
-                        <TableCell>
-                          {record?.store_name || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.table_type_name || '-'}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            minWidth: 260,
-                            maxWidth: 360
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            title={record?.product_name}
-                            sx={{
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {record?.product_name || '-'}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.product_sku || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.branch_code || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.store_code || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.security_type_name || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.table_number ?? '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.quantity ?? '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.keyboard || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {record?.pen || '-'}
-                        </TableCell>
-
-                        <TableCell>
-                          {formatDate(record?.created_at)}
-                        </TableCell>
-
-                        <TableCell align="right">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() =>
-                              handleOpenEdit(record)
-                            }
-                          >
-                            <EditOutlinedIcon fontSize="small" />
-                          </IconButton>
-
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() =>
-                              handleDelete(record)
-                            }
-                          >
-                            <DeleteOutlineOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={14} align="center">
-                        No display records found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </TableContainer>
-
-          <Stack
-            direction={{
-              xs: 'column',
-              sm: 'row'
-            }}
-            alignItems={{
-              xs: 'flex-start',
-              sm: 'center'
-            }}
-            justifyContent="space-between"
-            spacing={1}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Total records: {totalRecords}
-            </Typography>
-
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button
-                variant="outlined"
-                disabled={!hasPreviousPage || isFetching}
-                onClick={() => {
-                  setPage((currentValue) =>
-                    Math.max(1, currentValue - 1)
-                  );
-                }}
-              >
-                Previous
-              </Button>
-
-              <Typography variant="body2">
-                Page {currentPage} of {totalPages}
-              </Typography>
-
-              <Button
-                variant="outlined"
-                disabled={!hasNextPage || isFetching}
-                onClick={() => {
-                  setPage(
-                    (currentValue) => currentValue + 1
-                  );
-                }}
-              >
-                Next
-              </Button>
-            </Stack>
-          </Stack>
+          <ServerTable
+            columns={recordColumns}
+            rows={records}
+            getRowId={(record) => record.id}
+            loading={isLoading}
+            fetching={isFetching}
+            error={
+              isError
+                ? {
+                  message: getErrorMessage(error)
+                }
+                : null
+            }
+            emptyMessage="No display records found."
+            searchValue={search}
+            searchPlaceholder="Search display records..."
+            onSearchChange={handleTableSearchChange}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            totalCount={totalRecords}
+            onPageChange={handleTablePageChange}
+            onRowsPerPageChange={
+              handleRowsPerPageChange
+            }
+          />
         </Stack>
       </MainCard>
 
@@ -1311,7 +1300,9 @@ export default function DisplayRecordsPage() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Delete Display Record</DialogTitle>
+        <DialogTitle>
+          Delete Display Record
+        </DialogTitle>
 
         <DialogContent>
           <Typography>
@@ -1324,7 +1315,9 @@ export default function DisplayRecordsPage() {
 
           {deleteRecordMutation.isError && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {getErrorMessage(deleteRecordMutation.error)}
+              {getErrorMessage(
+                deleteRecordMutation.error
+              )}
             </Alert>
           )}
         </DialogContent>
@@ -1401,13 +1394,18 @@ export default function DisplayRecordsPage() {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose} disabled={isSaving}>
+          <Button
+            onClick={handleClose}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
 
           <Button
             variant="contained"
-            onClick={() => formikRef.current?.submitForm()}
+            onClick={() =>
+              formikRef.current?.submitForm()
+            }
             disabled={isSaving || isRegionsLoading}
           >
             {isSaving

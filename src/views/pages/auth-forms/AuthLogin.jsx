@@ -128,7 +128,7 @@ export default function AuthLogin() {
             )}
           </FormControl>
 
-          <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Grid>
               <FormControlLabel
                 control={<Checkbox checked={checked} onChange={(event) => setChecked(event.target.checked)} name="checked" color="primary" />}
@@ -140,7 +140,7 @@ export default function AuthLogin() {
                 Forgot Password?
               </Typography>
             </Grid>
-          </Grid>
+          </Grid> */}
           <Box sx={{ mt: 2 }}>
             <AnimateButton>
               <Button

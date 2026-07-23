@@ -1,4 +1,9 @@
 import axios from 'axios';
+import useAppStore from 'store/appStore';
+
+const baseURL =
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:5000';
 
 const getAuthState = () => {
   if (typeof window === 'undefined') {
@@ -6,32 +11,59 @@ const getAuthState = () => {
   }
 
   try {
-    const saved = localStorage.getItem('auth-state');
-    return saved ? JSON.parse(saved) : {};
+    const savedAuthState =
+      localStorage.getItem('auth-state');
+
+    return savedAuthState
+      ? JSON.parse(savedAuthState)
+      : {};
   } catch {
+    localStorage.removeItem('auth-state');
     return {};
   }
 };
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const axiosInstance = axios.create({
+  baseURL
+});
 
-const useAxios = () => {
-  const authState = getAuthState();
-  const token = authState?.accessToken || null;
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const authState = getAuthState();
+    const token = authState?.accessToken;
 
-  const axiosInstance = axios.create({
-    baseURL,
-    headers: {
-      Authorization: token ? `Bearer ${token}` : undefined
+    if (token) {
+      config.headers.Authorization =
+        `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
-  });
 
-  axiosInstance.interceptors.response.use(
-    (response) => response,
-    (error) => Promise.reject(error)
-  );
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-  return axiosInstance;
-};
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+
+    if (status === 401) {
+      useAppStore.getState().logout();
+
+      if (
+        typeof window !== 'undefined' &&
+        window.location.pathname !== '/signin'
+      ) {
+        window.location.replace('/signin');
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+const useAxios = () => axiosInstance;
 
 export default useAxios;
