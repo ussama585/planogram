@@ -98,6 +98,8 @@ const normalizeDisplayOverviewResponse = (responseData) => {
       : [];
 
     return stores.flatMap((store, storeIndex) => {
+      const storeId = store?.id ?? null;
+
       const branch = String(
         store?.branch_code ?? ""
       ).trim();
@@ -112,20 +114,6 @@ const normalizeDisplayOverviewResponse = (responseData) => {
 
       const products = Array.isArray(store?.products)
         ? store.products
-        : [];
-
-      const storeImages = Array.isArray(store?.images)
-        ? store.images
-          .filter((item) => item?.image)
-          .map((item, imageIndex) => ({
-            id:
-              item?.id ??
-              `${store?.id ?? storeIndex}-image-${imageIndex}`,
-            title: String(
-              item?.title ?? `Image ${imageIndex + 1}`
-            ).trim(),
-            image: String(item?.image ?? "").trim()
-          }))
         : [];
 
       return products.map((product, productIndex) => {
@@ -158,11 +146,11 @@ const normalizeDisplayOverviewResponse = (responseData) => {
             product?.id ??
             `${region?.id ?? regionIndex}-${store?.id ?? storeIndex}-${product?.product_id ?? productIndex}-${tableType}-${tableNumber}-${itemCode}`,
           productId: product?.product_id ?? null,
+          storeId,
           branch,
           storeCode,
           storeName,
           storeKey: `${branch}__${storeCode}__${storeName}`,
-          storeImages,
           tableType,
           tableNumber,
           quantity: quantityValue ?? 0,

@@ -1,18 +1,24 @@
 import {
   Box,
   ButtonBase,
+  CircularProgress,
   Collapse,
   Dialog,
   DialogContent,
   DialogTitle
 } from "@mui/material";
+
 import {
   IconChevronDown,
   IconChevronRight,
   IconPhoto,
   IconX
 } from "@tabler/icons-react";
+
 import { useState } from "react";
+import { useSnackbar } from "notistack";
+import useAxios from "api/useAxios";
+
 
 const SkuTable = ({ records }) => {
   return (
@@ -158,17 +164,122 @@ const StoreImagesModal = ({
   );
 };
 
+const getImagesFromResponse = (responseData) => {
+  const data = responseData?.data ?? responseData;
+
+  const rawImages = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.images)
+      ? data.images
+      : Array.isArray(data?.results)
+        ? data.results
+        : [];
+
+  return rawImages
+    .map((item, index) => {
+      if (typeof item === "string") {
+        return {
+          id: null,
+          image: item,
+          title: `Image ${index + 1}`
+        };
+      }
+
+      const image =
+        item?.image ||
+        item?.url ||
+        item?.image_url ||
+        item?.file ||
+        item?.path ||
+        "";
+
+      if (!image) {
+        return null;
+      }
+
+      return {
+        id: item?.id ?? null,
+        image,
+        title:
+          item?.title ||
+          item?.image_title ||
+          `Image ${index + 1}`
+      };
+    })
+    .filter(Boolean);
+};
+
 const StoreSection = ({ store }) => {
+  const api = useAxios();
+  const { enqueueSnackbar } = useSnackbar();
+
   const [imagesModalOpen, setImagesModalOpen] =
     useState(false);
 
-  const images = Array.isArray(store?.images)
-    ? store.images
-    : Array.isArray(store?.records?.[0]?.storeImages)
-      ? store.records[0].storeImages
-      : [];
+  const [storeImages, setStoreImages] =
+    useState([]);
 
-  const hasImages = images.length > 0;
+  const [imagesLoading, setImagesLoading] =
+    useState(false);
+
+  const storeId =
+    store?.id ??
+    store?.storeId ??
+    store?.records?.[0]?.storeId ??
+    null;
+
+  const handleViewStoreImages = async () => {
+    if (!storeId) {
+      enqueueSnackbar("Store ID not found.", {
+        variant: "error"
+      });
+
+      return;
+    }
+
+    try {
+      setImagesLoading(true);
+
+      const response = await api.get(
+        `/api/inventory/store-images/${storeId}`
+      );
+
+      const images = getImagesFromResponse(
+        response.data
+      );
+      console.log(images,"imagesimagesimages")
+      if (images.length === 0) {
+        setStoreImages([]);
+        setImagesModalOpen(false);
+
+        enqueueSnackbar("No images found.", {
+          variant: "info"
+        });
+
+        return;
+      }
+
+      setStoreImages(images);
+      setImagesModalOpen(true);
+    } catch (error) {
+      setStoreImages([]);
+      setImagesModalOpen(false);
+
+      enqueueSnackbar(
+        error?.response?.data?.message ||
+        "Unable to load store images.",
+        {
+          variant: "error"
+        }
+      );
+    } finally {
+      setImagesLoading(false);
+    }
+  };
+
+  const handleCloseImagesModal = () => {
+    setImagesModalOpen(false);
+  };
 
   return (
     <section className="de-store-section">
@@ -188,45 +299,59 @@ const StoreSection = ({ store }) => {
             <strong>{store.skuCount}</strong> items
           </span>
 
-          {hasImages && (
-            <ButtonBase
-              className="de-store-images-button"
-              onClick={() =>
-                setImagesModalOpen(true)
+          <ButtonBase
+            className="de-store-images-button"
+            onClick={handleViewStoreImages}
+            disabled={imagesLoading}
+            aria-label={`View images for ${store.name}`}
+            sx={{
+              border: "1px solid #fff",
+              padding: "4px 7px",
+              borderRadius: "3px",
+              marginLeft: 2,
+              color: "#fff",
+              backgroundColor: "action.hover",
+              "&:hover": {
+                backgroundColor: "action.selected"
+              },
+              "&.Mui-disabled": {
+                color: "rgba(255, 255, 255, 0.7)"
               }
-              aria-label={`View images for ${store.name}`}
-              title={`View ${images.length} store ${images.length === 1 ? "image" : "images"
-                }`}
-              sx={{
-                border: "1px solid #fff",
-                padding: "3px 3px",
-                borderRadius: "3px",
-                marginLeft: 2,
-                color: "#fff",
-                backgroundColor: "action.hover",
-                "&:hover": {
-                  backgroundColor: "action.selected"
-                }
-              }}
-            >
-              <IconPhoto size={19} stroke={2} style={{ marginRight: "2px" }} /> Store Images
-            </ButtonBase>
-          )}
+            }}
+          >
+            {imagesLoading ? (
+              <>
+                <CircularProgress
+                  size={16}
+                  color="inherit"
+                  sx={{ marginRight: "5px" }}
+                />
+
+                Loading...
+              </>
+            ) : (
+              <>
+                <IconPhoto
+                  size={19}
+                  stroke={2}
+                  style={{ marginRight: "4px" }}
+                />
+
+                Store Images
+              </>
+            )}
+          </ButtonBase>
         </div>
       </div>
 
       <SkuTable records={store.records} />
 
-      {hasImages && (
-        <StoreImagesModal
-          open={imagesModalOpen}
-          onClose={() =>
-            setImagesModalOpen(false)
-          }
-          storeName={store.name}
-          images={images}
-        />
-      )}
+      <StoreImagesModal
+        open={imagesModalOpen}
+        onClose={handleCloseImagesModal}
+        storeName={store.name}
+        images={storeImages}
+      />
     </section>
   );
 };
