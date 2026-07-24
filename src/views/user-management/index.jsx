@@ -39,6 +39,7 @@ import MainCard from 'ui-component/cards/MainCard';
 import ServerTable from 'ui-component/tables/server-side-custom-table';
 
 import useAxios from '../../api/useAxios';
+import { formatDate } from 'utils/helper-function';
 
 const getUserSchema = (isEditMode) =>
   Yup.object({
@@ -94,20 +95,6 @@ const getErrorMessage = (error) => {
   }
 
   return error?.message || 'Something went wrong.';
-};
-
-const formatDate = (value) => {
-  if (!value) {
-    return '-';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-
-  return date.toLocaleString();
 };
 
 const createUserFormData = (values) => {
