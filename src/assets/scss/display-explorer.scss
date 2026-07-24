@@ -1296,3 +1296,13 @@
   line-height: 1.2;
   white-space: nowrap;
 }
+
+.custom-table-pagination-component {
+  .MuiTablePagination-toolbar {
+    @media screen and (max-width: 500px) {
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}

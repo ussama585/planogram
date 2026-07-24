@@ -168,6 +168,7 @@ export default function ServerTable({
 
       <TablePagination
         component="div"
+        className='custom-table-pagination-component'
         count={totalCount}
         page={page}
         rowsPerPage={rowsPerPage}
