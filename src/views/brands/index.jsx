@@ -214,12 +214,27 @@ export default function BrandsPage() {
       {
         id: 'name',
         label: 'Name',
+        minWidth: 150,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere'
+        },
         render: (brand) => brand?.name || '-'
       },
       {
         id: 'actions',
         label: 'Actions',
         align: 'right',
+        minWidth: 110,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
         render: (brand) => (
           <>
             <IconButton

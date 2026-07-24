@@ -10,7 +10,7 @@ import {
 
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import FilterTiltShiftIcon from '@mui/icons-material/FilterTiltShift';
+import CollectionsIcon from '@mui/icons-material/Collections';
 import ClearIcon from '@mui/icons-material/Clear';
 
 import { useState } from "react";
@@ -45,7 +45,7 @@ const SkuTable = ({ records }) => {
         <tbody>
           {records.map((record) => (
             <tr key={record.id}>
-              <td>
+              <td className="desc-col">
                 <span
                   className="de-description-text"
                   title={record.description}
@@ -54,7 +54,7 @@ const SkuTable = ({ records }) => {
                 </span>
               </td>
 
-              <td>
+              <td className="code-col">
                 <span
                   className="de-item-code"
                   title={record.itemCode}
@@ -63,25 +63,25 @@ const SkuTable = ({ records }) => {
                 </span>
               </td>
 
-              <td>
+              <td className="qty-col">
                 <strong className="de-quantity">
                   {record.quantity}
                 </strong>
               </td>
 
-              <td>
+              <td className="type-col">
                 <span className="de-table-type-badge">
                   {record.tableType || "—"}
                 </span>
               </td>
 
-              <td>
+              <td className="table-no-col">
                 <span className="de-muted-value">
                   {record.tableNumber || "—"}
                 </span>
               </td>
 
-              <td>
+              <td className="security-col">
                 <span className="de-muted-value">
                   {record.securityType || "—"}
                 </span>
@@ -298,7 +298,7 @@ const StoreSection = ({ store }) => {
           </span>
 
           <ButtonBase
-            className="de-store-images-button"
+            className="de-store-images-button de-store-images-button-desktop"
             onClick={handleViewStoreImages}
             disabled={imagesLoading}
             aria-label={`View images for ${store.name}`}
@@ -329,13 +329,54 @@ const StoreSection = ({ store }) => {
               </>
             ) : (
               <>
-                <FilterTiltShiftIcon
+                  <CollectionsIcon
                   size={19}
                   stroke={2}
                   style={{ marginRight: "4px" }}
                 />
 
                 Store Images
+              </>
+            )}
+          </ButtonBase>
+
+          <ButtonBase
+            className="de-store-images-button de-store-images-button-mobile"
+            onClick={handleViewStoreImages}
+            disabled={imagesLoading}
+            aria-label={`View images for ${store.name}`}
+            sx={{
+              border: "1px solid #fff",
+              padding: "4px 7px",
+              borderRadius: "3px",
+              marginLeft: 2,
+              color: "#fff",
+              backgroundColor: "action.hover",
+              "&:hover": {
+                backgroundColor: "action.selected"
+              },
+              "&.Mui-disabled": {
+                color: "rgba(255, 255, 255, 0.7)"
+              }
+            }}
+          >
+            {imagesLoading ? (
+              <>
+                <CircularProgress
+                  size={16}
+                  color="inherit"
+                  sx={{ marginRight: "5px" }}
+                />
+
+                Loading...
+              </>
+            ) : (
+              <>
+                  <CollectionsIcon
+                  size={19}
+                  stroke={2}
+                  style={{ marginRight: "4px" }}
+                />
               </>
             )}
           </ButtonBase>

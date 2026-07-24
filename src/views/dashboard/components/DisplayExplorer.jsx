@@ -204,6 +204,33 @@ const getFilterParamValue = (selectedValues, options) => {
   return selectedValues.join(",");
 };
 
+
+const getPartiallySelectedOptions = (
+  options,
+  selectedValues
+) => {
+  if (
+    options.length === 0 ||
+    selectedValues.length === 0
+  ) {
+    return [];
+  }
+
+  const selectedValueSet = new Set(selectedValues);
+
+  const allSelected = options.every((option) =>
+    selectedValueSet.has(option.value)
+  );
+
+  if (allSelected) {
+    return [];
+  }
+
+  return options.filter((option) =>
+    selectedValueSet.has(option.value)
+  );
+};
+
 const DisplayExplorer = ({
   overviewContent = null,
   defaultExpandedRegion = "Al Kharj"
@@ -341,6 +368,44 @@ const DisplayExplorer = ({
       ),
     [tableOptionsData]
   );
+
+  const selectedRegionPills = useMemo(
+    () =>
+      getPartiallySelectedOptions(
+        regionOptions,
+        selectedRegions
+      ),
+    [regionOptions, selectedRegions]
+  );
+
+  const selectedTableTypePills = useMemo(
+    () =>
+      getPartiallySelectedOptions(
+        tableTypeOptions,
+        selectedTableTypes
+      ),
+    [tableTypeOptions, selectedTableTypes]
+  );
+
+  const selectedStoreCount = useMemo(() => {
+    const selectedStoreSet = new Set(
+      selectedStores
+    );
+
+    return storeOptions.filter((option) =>
+      selectedStoreSet.has(option.value)
+    ).length;
+  }, [storeOptions, selectedStores]);
+
+  const showStoreCountPill =
+    storeOptions.length > 0 &&
+    selectedStoreCount > 0 &&
+    selectedStoreCount < storeOptions.length;
+
+  const hasSelectedFilterPills =
+    selectedRegionPills.length > 0 ||
+    showStoreCountPill ||
+    selectedTableTypePills.length > 0;
 
   const filterOptionsLoading =
     isRegionsLoading ||
@@ -760,6 +825,39 @@ const DisplayExplorer = ({
                 </div>
               </div>
             </div>
+
+            {hasSelectedFilterPills && (
+              <div className="de-selected-filters-row">
+                {selectedRegionPills.map((region) => (
+                  <span
+                    key={`region-${region.value}`}
+                    className="de-selected-filter-pill"
+                  >
+                    {region.label}
+                  </span>
+                ))}
+
+                {showStoreCountPill && (
+                  <span className="de-selected-filter-pill">
+                    {selectedStoreCount}{' '}
+                    {selectedStoreCount === 1
+                      ? 'Store'
+                      : 'Stores'}
+                  </span>
+                )}
+
+                {selectedTableTypePills.map(
+                  (tableType) => (
+                    <span
+                      key={`table-type-${tableType.value}`}
+                      className="de-selected-filter-pill"
+                    >
+                      {tableType.label}
+                    </span>
+                  )
+                )}
+              </div>
+            )}
 
             <ButtonBase
               className="de-clear-button"

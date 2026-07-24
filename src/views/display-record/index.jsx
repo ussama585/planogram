@@ -34,6 +34,7 @@ import ServerTable from 'ui-component/tables/server-side-custom-table';
 import MainCard from 'ui-component/cards/MainCard';
 import useAxios from '../../api/useAxios';
 import recordSchema from './recordSchema';
+import { formatDate } from 'utils/helper-function';
 
 const getListFromResponse = (responseData) => {
   if (Array.isArray(responseData)) {
@@ -165,20 +166,6 @@ const getErrorMessage = (error) => {
   }
 
   return error?.message || 'Something went wrong.';
-};
-
-const formatDate = (value) => {
-  if (!value) {
-    return '-';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-
-  return date.toLocaleString();
 };
 
 const SearchableSelectField = ({
@@ -1097,35 +1084,52 @@ export default function DisplayRecordsPage() {
       {
         id: 'store_name',
         label: 'Store',
-        render: (record) => record?.store_name || '-',
+        minWidth: 150,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        render: (record) => record?.store_name || '-'
       },
       {
         id: 'table_type_name',
         label: 'Table Type',
-        render: (record) =>
-          record?.table_type_name || '-',
+        minWidth: 130,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        render: (record) => record?.table_type_name || '-'
       },
       {
         id: 'product_name',
         label: 'Product',
+        minWidth: 380,
+        width: 380,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
-          minWidth: 260,
-          maxWidth: 360
+          minWidth: 380,
+          width: 380,
+          whiteSpace: 'normal'
         },
         render: (record) => (
           <Typography
             variant="body2"
             title={record?.product_name || ''}
             sx={{
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: 2,
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
+              lineHeight: 1.5,
+              whiteSpace: 'normal',
+              overflowWrap: 'break-word'
             }}
           >
             {record?.product_name || '-'}
@@ -1135,79 +1139,123 @@ export default function DisplayRecordsPage() {
       {
         id: 'product_sku',
         label: 'Product SKU',
-        render: (record) =>
-          record?.product_sku || '-',
+        minWidth: 140,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        render: (record) => record?.product_sku || '-'
       },
       {
         id: 'branch_code',
         label: 'Branch Code',
-        render: (record) =>
-          record?.branch_code || '-',
+        minWidth: 130,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        render: (record) => record?.branch_code || '-'
       },
       {
         id: 'store_code',
         label: 'Store Code',
-        render: (record) =>
-          record?.store_code || '-',
+        minWidth: 120,
+        align: 'center',
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        render: (record) => record?.store_code || '-'
       },
       {
         id: 'security_type_name',
         label: 'Security Type',
-        render: (record) =>
-          record?.security_type_name || '-',
+        minWidth: 150,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        render: (record) => record?.security_type_name || '-'
       },
       {
         id: 'table_number',
         label: 'Table #',
-        render: (record) =>
-          record?.table_number ?? '-'
+        minWidth: 90,
+        align: 'center',
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
+        render: (record) => record?.table_number ?? '-'
       },
       {
         id: 'quantity',
         label: 'Quantity',
-        render: (record) =>
-          record?.quantity ?? '-'
+        minWidth: 90,
+        align: 'center',
+        sx: {
+          whiteSpace: 'nowrap',
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
+        render: (record) => record?.quantity ?? '-'
       },
       {
         id: 'keyboard',
         label: 'Keyboard',
-        render: (record) =>
-          record?.keyboard || '-'
+        minWidth: 100,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
+        render: (record) => record?.keyboard || '-'
       },
       {
         id: 'pen',
         label: 'Pen',
-        render: (record) =>
-          record?.pen || '-'
+        minWidth: 80,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
+        render: (record) => record?.pen || '-'
       },
       {
         id: 'created_at',
         label: 'Created At',
-        render: (record) =>
-          formatDate(record?.created_at),
-        cellSx: {
-          minWidth: 180,
+        minWidth: 130,
+        sx: {
           whiteSpace: 'nowrap'
-        }
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
+        render: (record) => formatDate(record?.created_at)
       },
       {
         id: 'actions',
         label: 'Actions',
         align: 'right',
+        minWidth: 110,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
         cellSx: {
-          minWidth: 100,
           whiteSpace: 'nowrap'
         },
         render: (record) => (

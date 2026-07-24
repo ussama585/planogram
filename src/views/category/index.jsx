@@ -208,12 +208,27 @@ export default function CategoryPage() {
       {
         id: 'name',
         label: 'Name',
+        minWidth: 150,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere'
+        },
         render: (category) => category?.name || '-'
       },
       {
         id: 'actions',
         label: 'Actions',
         align: 'right',
+        minWidth: 110,
+        sx: {
+          whiteSpace: 'nowrap'
+        },
+        cellSx: {
+          whiteSpace: 'nowrap'
+        },
         render: (category) => (
           <>
             <IconButton

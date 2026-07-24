@@ -69,7 +69,7 @@ export default function Breadcrumbs({
     marginTop: -2,
     width: '1rem',
     height: '1rem',
-    color: theme.palette.secondary.main
+    color: theme.palette.primary.main
   };
 
   const linkSX = {

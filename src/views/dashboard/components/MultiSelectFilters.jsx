@@ -5,13 +5,13 @@ import {
   InputBase,
   Paper,
   Popper
-} from "@mui/material";
+} from '@mui/material';
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import SearchIcon from '@mui/icons-material/Search';
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from 'react';
 
 const MultiSelectFilter = ({
   label,
@@ -19,23 +19,12 @@ const MultiSelectFilter = ({
   searchPlaceholder,
   options,
   value,
-  onChange
+  onChange,
 }) => {
   const anchorRef = useRef(null);
+
   const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-
-  // const visibleOptions = useMemo(() => {
-  //   const normalizedSearch = searchValue.trim().toLowerCase();
-
-  //   if (!normalizedSearch) {
-  //     return options;
-  //   }
-
-  //   return options.filter((option) =>
-  //     option.label.toLowerCase().includes(normalizedSearch)
-  //   );
-  // }, [options, searchValue]);
+  const [searchValue, setSearchValue] = useState('');
 
   const visibleOptions = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
@@ -58,18 +47,38 @@ const MultiSelectFilter = ({
     });
   }, [options, searchValue, value]);
 
+  const selectedOptions = useMemo(
+    () =>
+      options.filter((option) =>
+        value.includes(option.value)
+      ),
+    [options, value]
+  );
+
   const selectedAll =
-    options.length > 0 && value.length === options.length;
+    options.length > 0 &&
+    options.every((option) =>
+      value.includes(option.value)
+    );
+
+  const shouldShowPills =
+    !selectedAll && selectedOptions.length > 0;
 
   const triggerText = selectedAll
     ? allLabel
     : value.length === 0
-      ? "None"
+      ? 'None'
       : `${value.length} selected`;
 
   const toggleOption = (optionValue) => {
     if (value.includes(optionValue)) {
-      onChange(value.filter((selectedValue) => selectedValue !== optionValue));
+      onChange(
+        value.filter(
+          (selectedValue) =>
+            selectedValue !== optionValue
+        )
+      );
+
       return;
     }
 
@@ -86,19 +95,26 @@ const MultiSelectFilter = ({
 
   return (
     <div className="de-filter-control">
-      <span className="de-filter-label">{label}</span>
+      <span className="de-filter-label">
+        {label}
+      </span>
 
       <ButtonBase
         ref={anchorRef}
-        className={`de-select-trigger ${open ? "is-open" : ""}`}
-        onClick={() => setOpen((currentValue) => !currentValue)}
+        className={`de-select-trigger ${open ? 'is-open' : ''
+          }`}
+        onClick={() =>
+          setOpen((currentValue) => !currentValue)
+        }
       >
-        <span className="de-select-trigger-text">{triggerText}</span>
+        <span className="de-select-trigger-text">
+          {triggerText}
+        </span>
 
         {open ? (
-          <ExpandLessIcon size={16} stroke={2.2} />
+          <ExpandLessIcon />
         ) : (
-          <ExpandMoreIcon size={16} stroke={2.2} />
+          <ExpandMoreIcon />
         )}
       </ButtonBase>
 
@@ -112,13 +128,18 @@ const MultiSelectFilter = ({
         }}
       >
         <ClickAwayListener onClickAway={handleClose}>
-          <Paper className="de-select-menu" elevation={0}>
+          <Paper
+            className="de-select-menu"
+            elevation={0}
+          >
             <div className="de-select-search">
-              <SearchIcon size={17} />
+              <SearchIcon />
 
               <InputBase
                 value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
+                onChange={(event) =>
+                  setSearchValue(event.target.value)
+                }
                 placeholder={searchPlaceholder}
                 fullWidth
               />
@@ -130,10 +151,14 @@ const MultiSelectFilter = ({
                   <ButtonBase
                     key={option.value}
                     className="de-select-option"
-                    onClick={() => toggleOption(option.value)}
+                    onClick={() =>
+                      toggleOption(option.value)
+                    }
                   >
                     <Checkbox
-                      checked={value.includes(option.value)}
+                      checked={value.includes(
+                        option.value
+                      )}
                       size="small"
                       disableRipple
                     />
@@ -142,7 +167,9 @@ const MultiSelectFilter = ({
                   </ButtonBase>
                 ))
               ) : (
-                <div className="de-select-empty">No options found</div>
+                <div className="de-select-empty">
+                  No options found
+                </div>
               )}
             </div>
 
@@ -150,7 +177,11 @@ const MultiSelectFilter = ({
               <ButtonBase
                 className="de-select-footer-button"
                 onClick={() =>
-                  onChange(options.map((option) => option.value))
+                  onChange(
+                    options.map(
+                      (option) => option.value
+                    )
+                  )
                 }
               >
                 All
@@ -170,4 +201,4 @@ const MultiSelectFilter = ({
   );
 };
 
-export default MultiSelectFilter;
+export default MultiSelectFilter; 

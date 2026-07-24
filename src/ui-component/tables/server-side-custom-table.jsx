@@ -32,7 +32,7 @@ export default function ServerTable({
   onRowsPerPageChange,
   searchDelay = 500
 }) {
-  const [searchInput, setSearchInput] = useState(searchValue); 
+  const [searchInput, setSearchInput] = useState(searchValue);
 
   useEffect(() => {
     setSearchInput(searchValue);
@@ -52,15 +52,8 @@ export default function ServerTable({
       onSearchChange(normalizedInput);
     }, searchDelay);
 
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [
-    searchInput,
-    searchValue,
-    searchDelay,
-    onSearchChange
-  ]);
+    return () => clearTimeout(timeout);
+  }, [searchInput, searchValue, searchDelay, onSearchChange]);
 
   const handlePageChange = (_, newPage) => {
     onPageChange?.(newPage);
@@ -84,15 +77,27 @@ export default function ServerTable({
         </Box>
       )}
 
-      <TableContainer>
-        <Table size="small">
+      <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+        <Table
+          size="small"
+          sx={{
+            width: 'max-content',
+            minWidth: '100%',
+            tableLayout: 'auto'
+          }}
+        >
           <TableHead>
             <TableRow>
               {columns.map((column) => (
                 <TableCell
                   key={column.id}
                   align={column.align || 'left'}
-                  sx={column.sx}
+                  sx={{
+                    width: column.width,
+                    minWidth: column.minWidth || column.width,
+                    whiteSpace: 'nowrap',
+                    ...column.sx
+                  }}
                 >
                   {column.label}
                 </TableCell>
@@ -137,15 +142,17 @@ export default function ServerTable({
               </TableRow>
             ) : (
               rows.map((row, rowIndex) => (
-                <TableRow
-                  key={getRowId(row) ?? rowIndex}
-                  hover
-                >
+                <TableRow key={getRowId(row) ?? rowIndex} hover>
                   {columns.map((column) => (
                     <TableCell
                       key={column.id}
                       align={column.align || 'left'}
-                      sx={column.cellSx}
+                      sx={{
+                        width: column.width,
+                        minWidth: column.minWidth || column.width,
+                        maxWidth: column.maxWidth,
+                        ...column.cellSx
+                      }}
                     >
                       {column.render
                         ? column.render(row, rowIndex)

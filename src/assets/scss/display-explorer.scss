@@ -363,6 +363,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   min-height: 58px;
   padding: 0 28px;
   background: linear-gradient(105deg, #7100dd 0%, #9829ec 100%);
@@ -403,13 +404,36 @@
   }
 }
 
+.de-store-summary {
+  display: flex;
+  align-items: center;
+}
+
+.de-store-images-button-desktop {
+  display: none;
+
+  @media screen and (min-width:601px) {
+    display: flex;
+  }
+}
+
+.de-store-images-button-mobile {
+  display: block;
+
+  @media screen and (min-width:601px) {
+    display: none;
+  }
+}
+
 .de-table-scroll {
+  width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .de-sku-table {
   width: 100%;
-  min-width: 950px;
+  min-width: 1100px;
   table-layout: fixed;
   border-collapse: collapse;
 
@@ -424,6 +448,7 @@
     letter-spacing: 1px;
     text-align: left;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   td {
@@ -434,19 +459,20 @@
     color: #161827;
     font-size: 12px;
     vertical-align: middle;
+    white-space: nowrap;
   }
 }
 
 .de-description-column {
-  width: 33%;
+  width: 45%;
 }
 
 .de-code-column {
-  width: 28%;
+  width: 22%;
 }
 
 .de-qty-column {
-  width: 5%;
+  width: 4%;
 }
 
 .de-type-column {
@@ -454,25 +480,34 @@
 }
 
 .de-number-column {
-  width: 7%;
+  width: 5%;
 }
 
 .de-security-column {
-  width: 15%;
+  width: 12%;
 }
 
 .de-description-text,
 .de-item-code,
 .de-muted-value {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: inline-block;
+  overflow: visible;
+  max-width: none;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
 .de-description-text {
+  display: block;
+  width: 100%;
+  overflow: visible;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.5;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .de-item-code {
@@ -482,8 +517,20 @@
 }
 
 .de-quantity {
-  color: #6500d8;
+  color: #6600cc;
   font-size: 14px;
+}
+
+.qty-col {
+  span {
+    text-align: center;
+  }
+}
+
+.table-no-col {
+  span {
+    text-align: center;
+  }
 }
 
 .de-table-type-badge {
@@ -522,7 +569,6 @@
 
 @media (max-width: 700px) {
   .de-tabs {
-    gap: 25px;
     padding: 0 20px;
   }
 
@@ -569,6 +615,11 @@
     padding-right: 18px !important;
   }
 
+  .de-store-header {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+  }
+
   .de-region-heading {
     align-items: flex-start;
     flex-direction: column;
@@ -577,6 +628,16 @@
 
   .de-store-name {
     max-width: 210px;
+  }
+}
+
+@media (max-width: 400px) {
+  .de-tabs {
+    padding: 0 16px;
+  }
+
+  .de-tab {
+    font-size: 13px !important;
   }
 }
 
@@ -1207,4 +1268,31 @@
   .de-store-image-title {
     font-size: 16px;
   }
+}
+
+// selected pills on explorer tab
+.de-selected-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+}
+
+.de-selected-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 11px;
+  flex-shrink: 0;
+  background-color: #6600cc0f;
+  border: 1px solid rgba(102, 0, 204, 0.12);
+  border-radius: 20px;
+  color: #6600cc;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 }
