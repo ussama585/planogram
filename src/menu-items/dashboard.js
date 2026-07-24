@@ -1,8 +1,14 @@
 // assets
-import { IconDashboard, IconMap2, IconBuildingStore, IconBrand4chan, IconCategory, IconBox, IconTableDashed, IconShieldCog, IconDatabase, IconUserCog } from '@tabler/icons-react';
-
-// constant
-const icons = { IconDashboard };
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import MapIcon from '@mui/icons-material/Map';
+import StoreIcon from '@mui/icons-material/Store';
+import CategoryIcon from '@mui/icons-material/Category';
+import AppleIcon from '@mui/icons-material/Apple';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import StorageIcon from '@mui/icons-material/Storage';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 
 // ==============================|| DASHBOARD MENU ITEMS ||============================== //
 
@@ -19,7 +25,7 @@ const dashboard = {
       title: 'Dashboard',
       type: 'item',
       url: '/',
-      icon: icons.IconDashboard,
+      icon: DashboardIcon,
       breadcrumbs: false
     },
     {
@@ -27,7 +33,7 @@ const dashboard = {
       title: 'Region',
       type: 'item',
       url: '/region',
-      icon: IconMap2,
+      icon: MapIcon,
       breadcrumbs: false
     },
     {
@@ -35,7 +41,7 @@ const dashboard = {
       title: 'Store',
       type: 'item',
       url: '/store',
-      icon: IconBuildingStore,
+      icon: StoreIcon,
       breadcrumbs: false
     },
     {
@@ -43,7 +49,7 @@ const dashboard = {
       title: 'Categories',
       type: 'item',
       url: '/categories',
-      icon: IconCategory,
+      icon: CategoryIcon,
       breadcrumbs: false
     },
     {
@@ -51,7 +57,7 @@ const dashboard = {
       title: 'Brands',
       type: 'item',
       url: '/brands',
-      icon: IconBrand4chan,
+      icon: AppleIcon,
       breadcrumbs: false
     },
     {
@@ -59,7 +65,7 @@ const dashboard = {
       title: 'Products',
       type: 'item',
       url: '/products',
-      icon: IconBox,
+      icon: ViewInArIcon,
       breadcrumbs: false
     },
     {
@@ -67,7 +73,7 @@ const dashboard = {
       title: 'Tables',
       type: 'item',
       url: '/tables',
-      icon: IconTableDashed,
+      icon: ViewListIcon,
       breadcrumbs: false
     },
     {
@@ -75,7 +81,7 @@ const dashboard = {
       title: 'Security Type',
       type: 'item',
       url: '/security-types',
-      icon: IconShieldCog,
+      icon: AdminPanelSettingsIcon,
       breadcrumbs: false
     },
     {
@@ -83,7 +89,7 @@ const dashboard = {
       title: 'Display Record',
       type: 'item',
       url: '/display-record',
-      icon: IconDatabase,
+      icon: StorageIcon,
       breadcrumbs: false
     },
     {
@@ -91,7 +97,7 @@ const dashboard = {
       title: 'User Management',
       type: 'item',
       url: '/user-management',
-      icon: IconUserCog,
+      icon: ManageAccountsIcon,
       breadcrumbs: false
     },
   ]

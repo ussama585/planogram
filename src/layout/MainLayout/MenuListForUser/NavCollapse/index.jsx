@@ -26,8 +26,10 @@ import { useGetMenuMaster } from 'api/menu';
 // third party
 
 // assets
-import { IconChevronDown, IconChevronRight, IconChevronUp } from '@tabler/icons-react';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 export default function NavCollapse({ menu, level, parentId }) {
   const theme = useTheme();
@@ -149,9 +151,9 @@ export default function NavCollapse({ menu, level, parentId }) {
   );
 
   const collapseIcon = drawerOpen ? (
-    <IconChevronUp stroke={1.5} size="16px" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
+    <ExpandLessIcon stroke={1.5} size="16px" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
   ) : (
-    <IconChevronRight stroke={1.5} size="16px" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
+    <ChevronRightIcon stroke={1.5} size="16px" style={{ marginTop: 'auto', marginBottom: 'auto' }} />
   );
 
   const iconSelectedColor = 'secondary.main';
@@ -167,13 +169,13 @@ export default function NavCollapse({ menu, level, parentId }) {
           ...(!drawerOpen && { pl: 1.25 }),
           ...(drawerOpen &&
             level === 1 && {
-              '&:hover': { bgcolor: 'secondary.light' },
-              '&.Mui-selected': {
-                bgcolor: 'secondary.light',
-                color: iconSelectedColor,
-                '&:hover': { color: iconSelectedColor, bgcolor: 'secondary.light' }
-              }
-            }),
+            '&:hover': { bgcolor: 'secondary.light' },
+            '&.Mui-selected': {
+              bgcolor: 'secondary.light',
+              color: iconSelectedColor,
+              '&:hover': { color: iconSelectedColor, bgcolor: 'secondary.light' }
+            }
+          }),
           ...((!drawerOpen || level !== 1) && {
             py: level === 1 ? 0 : 1,
             '&:hover': { bgcolor: 'transparent' },
@@ -191,21 +193,21 @@ export default function NavCollapse({ menu, level, parentId }) {
               color: isSelected ? iconSelectedColor : 'text.primary',
               ...(!drawerOpen &&
                 level === 1 && {
-                  borderRadius: `${borderRadius}px`,
-                  width: 46,
-                  height: 46,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                borderRadius: `${borderRadius}px`,
+                width: 46,
+                height: 46,
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&:hover': {
+                  bgcolor: 'secondary.light'
+                },
+                ...(isSelected && {
+                  bgcolor: 'secondary.light',
                   '&:hover': {
                     bgcolor: 'secondary.light'
-                  },
-                  ...(isSelected && {
-                    bgcolor: 'secondary.light',
-                    '&:hover': {
-                      bgcolor: 'secondary.light'
-                    }
-                  })
+                  }
                 })
+              })
             }}
           >
             {menuIcon}
@@ -240,7 +242,7 @@ export default function NavCollapse({ menu, level, parentId }) {
           </Tooltip>
         )}
 
-        {openMini || open ? collapseIcon : <IconChevronDown stroke={1.5} size="16px" style={{ marginTop: 'auto', marginBottom: 'auto' }} />}
+        {openMini || open ? collapseIcon : <ExpandMoreIcon stroke={1.5} size="16px" style={{ marginTop: 'auto', marginBottom: 'auto' }} />}
 
         {!drawerOpen && (
           <Popper

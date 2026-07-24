@@ -8,12 +8,10 @@ import {
   DialogTitle
 } from "@mui/material";
 
-import {
-  IconChevronDown,
-  IconChevronRight,
-  IconPhoto,
-  IconX
-} from "@tabler/icons-react";
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FilterTiltShiftIcon from '@mui/icons-material/FilterTiltShift';
+import ClearIcon from '@mui/icons-material/Clear';
 
 import { useState } from "react";
 import { useSnackbar } from "notistack";
@@ -120,7 +118,7 @@ const StoreImagesModal = ({
           onClick={onClose}
           aria-label="Close store images"
         >
-          <IconX size={20} stroke={2.3} />
+          <ClearIcon size={20} stroke={2.3} />
         </ButtonBase>
       </DialogTitle>
 
@@ -247,7 +245,7 @@ const StoreSection = ({ store }) => {
       const images = getImagesFromResponse(
         response.data
       );
-      console.log(images,"imagesimagesimages")
+      console.log(images, "imagesimagesimages")
       if (images.length === 0) {
         setStoreImages([]);
         setImagesModalOpen(false);
@@ -331,7 +329,7 @@ const StoreSection = ({ store }) => {
               </>
             ) : (
               <>
-                <IconPhoto
+                <FilterTiltShiftIcon
                   size={19}
                   stroke={2}
                   style={{ marginRight: "4px" }}
@@ -384,9 +382,9 @@ const DisplayRegionAccordion = ({
         </div>
 
         {expanded ? (
-          <IconChevronDown size={18} />
+          <ExpandMoreIcon size={18} />
         ) : (
-          <IconChevronRight size={18} />
+          <ChevronRightIcon size={18} />
         )}
       </ButtonBase>
 

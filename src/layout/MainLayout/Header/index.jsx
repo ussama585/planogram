@@ -15,8 +15,8 @@ import useAppStore from 'store/appStore';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
 
 // assets
-import { IconMenu2 } from '@tabler/icons-react';
-
+// import { IconMenu2 } from '@tabler/icons-react';
+import MenuIcon from '@mui/icons-material/Menu';
 // ==============================|| MAIN NAVBAR / HEADER ||============================== //
 
 export default function Header() {
@@ -55,7 +55,7 @@ export default function Header() {
           onClick={() => handlerDrawerOpen(!drawerOpen)}
           color="inherit"
         >
-          <IconMenu2 stroke={1.5} size="20px" />
+          <MenuIcon stroke={1.5} size="20px" />
         </Avatar>
         <Box component="span" sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
           <div style={{ display: "flex", alignItems: 'center' }}>

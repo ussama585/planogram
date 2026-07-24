@@ -18,7 +18,9 @@ import PopupState, { bindPopper, bindToggle } from 'material-ui-popup-state';
 import Transitions from 'ui-component/extended/Transitions';
 
 // assets
-import { IconAdjustmentsHorizontal, IconSearch, IconX } from '@tabler/icons-react';
+import TuneIcon from '@mui/icons-material/Tune';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 function HeaderAvatarComponent({ children, ...others }, ref) {
   const theme = useTheme();
@@ -59,13 +61,13 @@ function MobileSearch({ value, setValue, popupState }) {
       placeholder="Search"
       startAdornment={
         <InputAdornment position="start">
-          <IconSearch stroke={1.5} size="16px" />
+          <SearchIcon stroke={1.5} size="16px" />
         </InputAdornment>
       }
       endAdornment={
         <InputAdornment position="end">
           <HeaderAvatar>
-            <IconAdjustmentsHorizontal stroke={1.5} size="20px" />
+            <TuneIcon stroke={1.5} size="20px" />
           </HeaderAvatar>
           <Box sx={{ ml: 2 }}>
             <Avatar
@@ -82,7 +84,7 @@ function MobileSearch({ value, setValue, popupState }) {
               }}
               {...bindToggle(popupState)}
             >
-              <IconX stroke={1.5} size="20px" />
+              <ClearIcon stroke={1.5} size="20px" />
             </Avatar>
           </Box>
         </InputAdornment>
@@ -107,7 +109,7 @@ export default function SearchSection() {
             <>
               <Box sx={{ ml: 2 }}>
                 <HeaderAvatar {...bindToggle(popupState)}>
-                  <IconSearch stroke={1.5} size="19.2px" />
+                  <SearchIcon stroke={1.5} size="19.2px" />
                 </HeaderAvatar>
               </Box>
               <Popper
@@ -143,7 +145,7 @@ export default function SearchSection() {
           placeholder="Search"
           startAdornment={
             <InputAdornment position="start">
-              <IconSearch stroke={1.5} size="16px" />
+              <SearchIcon stroke={1.5} size="16px" />
             </InputAdornment>
           }
           endAdornment={

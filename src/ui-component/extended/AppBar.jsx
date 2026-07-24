@@ -24,7 +24,6 @@ import Box from '@mui/material/Box';
 import Logo from 'ui-component/Logo';
 
 // assets
-import { IconBook, IconCreditCard, IconDashboard, IconHome2 } from '@tabler/icons-react';
 import MenuIcon from '@mui/icons-material/Menu';
 
 function ElevationScroll({ children, window }) {
@@ -64,7 +63,7 @@ export default function AppBar({ ...others }) {
             <Typography component={RouterLink} to="/" sx={{ flexGrow: 1, textAlign: 'left' }}>
               <Logo />
             </Typography>
-            <Stack direction="row" sx={{ display: { xs: 'none', sm: 'block' } }} spacing={{ xs: 1.5, md: 2.5 }}>
+            {/* <Stack direction="row" sx={{ display: { xs: 'none', sm: 'block' } }} spacing={{ xs: 1.5, md: 2.5 }}>
               <Button color="inherit" component={Link} href="#">
                 Home
               </Button>
@@ -122,7 +121,7 @@ export default function AppBar({ ...others }) {
                   </Box>
                 )}
               </Drawer>
-            </Box>
+            </Box> */}
           </Toolbar>
         </Container>
       </MuiAppBar>

@@ -31,9 +31,11 @@ import useAppStore from 'store/appStore';
 
 // assets
 import User1 from 'assets/images/users/user-round.svg';
-import { IconLogout, IconSearch, IconSettings, IconUser } from '@tabler/icons-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
+import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsIcon from '@mui/icons-material/Settings';
+
 
 // ==============================|| PROFILE MENU ||============================== //
 
@@ -114,7 +116,7 @@ export default function ProfileSection() {
             color="inherit"
           />
         }
-        label={<IconSettings stroke={1.5} size="24px" />}
+        label={<SettingsIcon stroke={1.5} size="24px" />}
         ref={anchorRef}
         aria-controls={open ? 'menu-list-grow' : undefined}
         aria-haspopup="true"
@@ -182,7 +184,7 @@ export default function ProfileSection() {
                           onClick={handleLogout}
                         >
                           <ListItemIcon>
-                            <IconLogout stroke={1.5} size="20px" />
+                            <LogoutIcon stroke={1.5} size="20px" />
                           </ListItemIcon>
                           <ListItemText primary={<Typography variant="body2">Logout</Typography>} />
                         </ListItemButton>

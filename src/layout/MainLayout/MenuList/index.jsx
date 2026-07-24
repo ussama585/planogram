@@ -59,7 +59,7 @@ function MenuList() {
                   item={item}
                   level={1}
                   isParents
-                  setSelectedID={() => setSelectedID('')}
+                  setSelectedID={() => setSelectedID(item.id)}
                 />
 
                 {index !== 0 && <Divider sx={{ py: 0.5 }} />}

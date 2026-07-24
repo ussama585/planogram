@@ -15,7 +15,8 @@ import Box from '@mui/material/Box';
 import { adminMenu, userMenu } from 'menu-items';
 
 // assets
-import { IconChevronRight, IconTallymark1 } from '@tabler/icons-react';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import AccountTreeTwoToneIcon from '@mui/icons-material/AccountTreeTwoTone';
 import HomeIcon from '@mui/icons-material/Home';
 import HomeTwoToneIcon from '@mui/icons-material/HomeTwoTone';
@@ -43,7 +44,7 @@ export default function Breadcrumbs({
   links,
   maxItems,
   rightAlign = true,
-  separator = IconChevronRight,
+  separator = ChevronRightIcon,
   title = true,
   titleBottom,
   sx,
@@ -127,7 +128,7 @@ export default function Breadcrumbs({
 
   // item separator
   const SeparatorIcon = separator;
-  const separatorIcon = separator ? <SeparatorIcon stroke={1.5} size="16px" /> : <IconTallymark1 stroke={1.5} size="16px" />;
+  const separatorIcon = separator ? <SeparatorIcon stroke={1.5} size="16px" /> : < HorizontalRuleIcon sx={{ transform: 'rotate(90deg)' }} stroke={1.5} size="16px" />;
 
   let mainContent;
   let itemContent;

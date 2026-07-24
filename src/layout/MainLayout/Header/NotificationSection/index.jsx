@@ -24,8 +24,8 @@ import Transitions from 'ui-component/extended/Transitions';
 import NotificationList from './NotificationList';
 
 // assets
-import { IconBell } from '@tabler/icons-react';
-
+// import { IconBell } from '@tabler/icons-react';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 // notification status options
 const status = [
   {
@@ -105,7 +105,7 @@ export default function NotificationSection() {
           onClick={handleToggle}
           color="inherit"
         >
-          <IconBell stroke={1.5} size="20px" />
+          <NotificationsIcon stroke={1.5} size="20px" />
         </Avatar>
       </Box>
       <Popper

@@ -1,13 +1,4 @@
 // assets
-import { IconTypography, IconPalette, IconShadow, IconWindmill } from '@tabler/icons-react';
-
-// constant
-const icons = {
-  IconTypography,
-  IconPalette,
-  IconShadow,
-  IconWindmill
-};
 
 // ==============================|| UTILITIES MENU ITEMS ||============================== //
 
@@ -21,7 +12,7 @@ const utilities = {
       title: 'Typography',
       type: 'item',
       url: '/typography',
-      icon: icons.IconTypography,
+      // icon: icons.IconTypography,
       breadcrumbs: false
     },
     {
@@ -29,7 +20,7 @@ const utilities = {
       title: 'Color',
       type: 'item',
       url: '/color',
-      icon: icons.IconPalette,
+      // icon: icons.IconPalette,
       breadcrumbs: false
     },
     {
@@ -37,7 +28,7 @@ const utilities = {
       title: 'Shadow',
       type: 'item',
       url: '/shadow',
-      icon: icons.IconShadow,
+      // icon: icons.IconShadow,
       breadcrumbs: false
     }
   ]

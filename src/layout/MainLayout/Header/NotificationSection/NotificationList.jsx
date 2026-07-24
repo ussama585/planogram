@@ -15,8 +15,11 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
 // assets
-import { IconBrandTelegram, IconBuildingStore, IconMailbox, IconPhoto } from '@tabler/icons-react';
 import User1 from 'assets/images/users/user-round.svg';
+import TelegramIcon from '@mui/icons-material/Telegram';
+import StoreIcon from '@mui/icons-material/Store';
+import MarkunreadMailboxIcon from '@mui/icons-material/MarkunreadMailbox';
+import MotionPhotosAutoIcon from '@mui/icons-material/MotionPhotosAuto';
 
 function ListItemWrapper({ children }) {
   const theme = useTheme();
@@ -85,7 +88,7 @@ export default function NotificationList() {
                 bgcolor: 'success.light'
               }}
             >
-              <IconBuildingStore stroke={1.5} size="20px" />
+              <StoreIcon stroke={1.5} size="20px" />
             </Avatar>
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">Store Verification Done</Typography>} />
@@ -112,14 +115,14 @@ export default function NotificationList() {
                 bgcolor: 'primary.light'
               }}
             >
-              <IconMailbox stroke={1.5} size="20px" />
+              <MarkunreadMailboxIcon stroke={1.5} size="20px" />
             </Avatar>
           </ListItemAvatar>
           <ListItemText primary={<Typography variant="subtitle1">Check Your Mail.</Typography>} />
         </ListItem>
         <Stack spacing={2} sx={containerSX}>
           <Typography variant="subtitle2">All done! Now check your inbox as you&apos;re in for a sweet treat!</Typography>
-          <Button variant="contained" endIcon={<IconBrandTelegram stroke={1.5} size={20} />} sx={{ width: 'min-content' }}>
+          <Button variant="contained" endIcon={<TelegramIcon stroke={1.5} size={20} />} sx={{ width: 'min-content' }}>
             Mail
           </Button>
         </Stack>
@@ -148,7 +151,7 @@ export default function NotificationList() {
           </Typography>
           <Card sx={{ bgcolor: 'secondary.light' }}>
             <Stack direction="row" spacing={2} sx={{ p: 2.5 }}>
-              <IconPhoto stroke={1.5} size="20px" />
+              <MotionPhotosAutoIcon stroke={1.5} size="20px" />
               <Typography variant="subtitle1">demo.jpg</Typography>
             </Stack>
           </Card>

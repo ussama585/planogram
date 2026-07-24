@@ -6,9 +6,9 @@
 .de-tabs {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 0px;
   height: 56px;
-  padding: 0 3.5%;
+  padding: 0 2.5%;
   background: #ffffff;
   border-bottom: 1px solid #e4def2;
   box-shadow: 0 -5px 22px rgba(111, 0, 220, 0.22);
@@ -17,7 +17,7 @@
 
 .de-tab {
   height: 100%;
-  padding: 0 25px !important;
+  padding: 0 15px !important;
   color: #727895 !important;
   font-size: 15px !important;
   font-weight: 500 !important;

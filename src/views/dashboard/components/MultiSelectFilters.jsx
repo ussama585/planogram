@@ -6,11 +6,11 @@ import {
   Paper,
   Popper
 } from "@mui/material";
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconSearch
-} from "@tabler/icons-react";
+
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import SearchIcon from '@mui/icons-material/Search';
+
 import { useMemo, useRef, useState } from "react";
 
 const MultiSelectFilter = ({
@@ -75,9 +75,9 @@ const MultiSelectFilter = ({
         <span className="de-select-trigger-text">{triggerText}</span>
 
         {open ? (
-          <IconChevronUp size={16} stroke={2.2} />
+          <ExpandLessIcon size={16} stroke={2.2} />
         ) : (
-          <IconChevronDown size={16} stroke={2.2} />
+          <ExpandMoreIcon size={16} stroke={2.2} />
         )}
       </ButtonBase>
 
@@ -93,7 +93,7 @@ const MultiSelectFilter = ({
         <ClickAwayListener onClickAway={handleClose}>
           <Paper className="de-select-menu" elevation={0}>
             <div className="de-select-search">
-              <IconSearch size={17} />
+              <SearchIcon size={17} />
 
               <InputBase
                 value={searchValue}

@@ -3,7 +3,8 @@ import {
   CircularProgress,
   InputBase
 } from "@mui/material";
-import { IconSearch, IconX } from "@tabler/icons-react";
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useQuery } from "@tanstack/react-query";
 import {
   useEffect,
@@ -727,7 +728,7 @@ const DisplayExplorer = ({
                       size={17}
                     />
                   ) : (
-                    <IconSearch
+                    <SearchIcon
                       size={18}
                     />
                   )}
@@ -750,7 +751,7 @@ const DisplayExplorer = ({
                         clearSearch
                       }
                     >
-                      <IconX
+                      <ClearIcon
                         size={15}
                         stroke={2.4}
                       />
@@ -766,7 +767,7 @@ const DisplayExplorer = ({
             >
               Clear All
 
-              <IconX
+              <ClearIcon
                 size={13}
                 stroke={2.5}
               />
