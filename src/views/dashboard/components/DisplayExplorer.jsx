@@ -20,6 +20,7 @@ import useAxios from "../../../api/useAxios";
 import MultiSelectFilter from "./MultiSelectFilters";
 import DisplayRegionAccordion from "./DisplayRegionAccordion";
 import DisplayOverview from "./DisplayOverview";
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 
 const getListFromResponse = (responseData) => {
   if (Array.isArray(responseData)) {
@@ -277,6 +278,85 @@ const DisplayExplorer = ({
     filterRequestVersion,
     setFilterRequestVersion
   ] = useState(0);
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    if (records.length === 0 || recordsAreLoading) {
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+
+      const {
+        utils,
+        writeFile
+      } = await import('xlsx');
+
+      const exportRows = records.map((record, index) => ({
+        '#': index + 1,
+        Region: record.region || '',
+        Store: record.storeName || '',
+        'Branch Code': record.branch || '',
+        'Store Code': record.storeCode || '',
+        City: record.city || '',
+        Area: record.area || '',
+        Product: record.description || '',
+        'Item Code': record.itemCode || '',
+        Quantity: record.quantity ?? 0,
+        'Table Type': record.tableType || '',
+        'Table Number': record.tableNumber || '',
+        'Security Type': record.securityType || '',
+        Keyboard: record.keyboard || '',
+        Pen: record.pen || ''
+      }));
+
+      const worksheet = utils.json_to_sheet(exportRows);
+
+      worksheet['!cols'] = [
+        { wch: 6 },
+        { wch: 20 },
+        { wch: 28 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 16 },
+        { wch: 16 },
+        { wch: 45 },
+        { wch: 22 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 14 },
+        { wch: 14 }
+      ];
+
+      const workbook = utils.book_new();
+
+      utils.book_append_sheet(
+        workbook,
+        worksheet,
+        'Filtered Display Data'
+      );
+
+      const currentDate = new Date()
+        .toISOString()
+        .slice(0, 10);
+
+      writeFile(
+        workbook,
+        `display-explorer-${currentDate}.xlsx`,
+        {
+          compression: true
+        }
+      );
+    } catch (error) {
+      console.error('Unable to export Excel file:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -859,17 +939,42 @@ const DisplayExplorer = ({
               </div>
             )}
 
-            <ButtonBase
-              className="de-clear-button"
-              onClick={resetFilters}
-            >
-              Clear All
+            <div className="de-filter-actions">
+              <ButtonBase
+                className="de-clear-button"
+                onClick={resetFilters}
+              >
+                Clear All
 
-              <ClearIcon
-                size={13}
-                stroke={2.5}
-              />
-            </ButtonBase>
+                <ClearIcon
+                  size={13}
+                  stroke={2.5}
+                />
+              </ButtonBase>
+
+              <ButtonBase
+                className="de-export-button"
+                onClick={handleExportExcel}
+                disabled={
+                  isExporting ||
+                  recordsAreLoading ||
+                  records.length === 0
+                }
+              >
+                {isExporting ? (
+                  <CircularProgress
+                    size={16}
+                    color="inherit"
+                  />
+                ) : (
+                  <FileDownloadOutlinedIcon fontSize="small" />
+                )}
+
+                {isExporting
+                  ? 'Exporting...'
+                  : 'Export Excel'}
+              </ButtonBase>
+            </div>
           </section>
 
           <section className="de-stats-card">
