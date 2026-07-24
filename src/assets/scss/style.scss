@@ -116,6 +116,18 @@ body,
   }
 }
 
+// drawer scss
+.drawer-header-icon {
+  display: block;
+  margin: 0 auto;
+}
+
+@media (min-width: 900px) {
+  .drawer-header-icon {
+    display: none;
+  }
+}
+
 // ==============================|| ANIMATION KEYFRAMES ||============================== //
 
 @keyframes wings {

@@ -52,13 +52,13 @@ export default function Login() {
                   <Grid size={12}>
                     <Divider />
                   </Grid>
-                  <Grid size={12}>
+                  {/* <Grid size={12}>
                     <Grid container direction="column" sx={{ alignItems: 'center' }} size={12}>
                       <Typography component={Link} to="/signup" variant="subtitle1" sx={{ textDecoration: 'none' }}>
                         Don&apos;t have an account?
                       </Typography>
                     </Grid>
-                  </Grid>
+                  </Grid> */}
                 </Grid>
               </AuthCardWrapper>
             </Grid>

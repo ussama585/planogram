@@ -34,7 +34,7 @@ const dashboard = {
       type: 'item',
       url: '/region',
       icon: MapIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'store',
@@ -42,7 +42,7 @@ const dashboard = {
       type: 'item',
       url: '/store',
       icon: StoreIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'categories',
@@ -50,7 +50,7 @@ const dashboard = {
       type: 'item',
       url: '/categories',
       icon: CategoryIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'brands',
@@ -58,7 +58,7 @@ const dashboard = {
       type: 'item',
       url: '/brands',
       icon: AppleIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'products',
@@ -66,7 +66,7 @@ const dashboard = {
       type: 'item',
       url: '/products',
       icon: ViewInArIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'tables',
@@ -74,7 +74,7 @@ const dashboard = {
       type: 'item',
       url: '/tables',
       icon: ViewListIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'security-types',
@@ -82,7 +82,7 @@ const dashboard = {
       type: 'item',
       url: '/security-types',
       icon: AdminPanelSettingsIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'display-record',
@@ -90,7 +90,7 @@ const dashboard = {
       type: 'item',
       url: '/display-record',
       icon: StorageIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
     {
       id: 'user-management',
@@ -98,7 +98,7 @@ const dashboard = {
       type: 'item',
       url: '/user-management',
       icon: ManageAccountsIcon,
-      breadcrumbs: false
+      breadcrumbs: true
     },
   ]
 };

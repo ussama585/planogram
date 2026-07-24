@@ -269,9 +269,7 @@ export default function StorePage() {
         id: 'region',
         label: 'Region',
         render: (store) =>
-          store?.region_name ||
-          store?.region ||
-          '-'
+          store?.region_name || '-'
       },
       {
         id: 'city',
@@ -770,9 +768,7 @@ export default function StorePage() {
                     value={
                       regionOptions.find((option) => {
                         const optionName =
-                          option?.name ||
                           option?.region_name ||
-                          option?.title ||
                           '';
 
                         return (
@@ -786,10 +782,7 @@ export default function StorePage() {
                     }
                     getOptionLabel={(option) =>
                       String(
-                        option?.name ||
                         option?.region_name ||
-                        option?.title ||
-                        option?.id ||
                         ''
                       )
                     }
@@ -803,9 +796,7 @@ export default function StorePage() {
 
                       setFieldValue(
                         'region_name',
-                        selectedRegion?.name ||
                         selectedRegion?.region_name ||
-                        selectedRegion?.title ||
                         ''
                       );
                     }}

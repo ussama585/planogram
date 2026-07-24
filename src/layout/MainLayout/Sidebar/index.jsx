@@ -50,7 +50,12 @@ function Sidebar() {
     );
 
     let drawerSX = { paddingLeft: '0px', paddingRight: '0px', marginTop: '90px' };
-    if (drawerOpen) drawerSX = { paddingLeft: '16px', paddingRight: '16px', marginTop: '70px' };
+    if (!downMD && drawerOpen) {
+      drawerSX = { paddingLeft: '16px', paddingRight: '16px', marginTop: '70px' };
+    }
+    else if (downMD) {
+      drawerSX = { paddingLeft: '16px', paddingRight: '16px', marginTop: '0' };
+    }
 
     return (
       <>
@@ -85,12 +90,14 @@ function Sidebar() {
               width: drawerWidth,
               bgcolor: 'background.default',
               color: 'text.primary',
-              borderRight: 'none'
+              borderRight: 'none',
+              // paddingTop: "70px", 
             }
           }}
           ModalProps={{ keepMounted: true }}
           color="inherit"
         >
+          <div style={{ display: "block", margin: "0 auto" }}>{logo}</div>
           {downMD}
           {drawer}
         </Drawer>

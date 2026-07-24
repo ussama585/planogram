@@ -25,17 +25,38 @@ const MultiSelectFilter = ({
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
+  // const visibleOptions = useMemo(() => {
+  //   const normalizedSearch = searchValue.trim().toLowerCase();
+
+  //   if (!normalizedSearch) {
+  //     return options;
+  //   }
+
+  //   return options.filter((option) =>
+  //     option.label.toLowerCase().includes(normalizedSearch)
+  //   );
+  // }, [options, searchValue]);
+
   const visibleOptions = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return options;
-    }
+    const filteredOptions = normalizedSearch
+      ? options.filter((option) =>
+        option.label.toLowerCase().includes(normalizedSearch)
+      )
+      : options;
 
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(normalizedSearch)
-    );
-  }, [options, searchValue]);
+    return [...filteredOptions].sort((firstOption, secondOption) => {
+      const firstSelected = value.includes(firstOption.value);
+      const secondSelected = value.includes(secondOption.value);
+
+      if (firstSelected === secondSelected) {
+        return 0;
+      }
+
+      return firstSelected ? -1 : 1;
+    });
+  }, [options, searchValue, value]);
 
   const selectedAll =
     options.length > 0 && value.length === options.length;
